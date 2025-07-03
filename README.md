@@ -175,9 +175,9 @@ Schema Migration (Optional):
 Use drizzle-kit to apply the schema to your Supabase DB:
 
 npm run db:push
-# Or generate migration files and apply:
+Or generate migration files and apply:
 npm run db:generate
-# After reviewing generated migration files:
+After reviewing generated migration files:
 npx drizzle-kit migrate # Apply migrations to the actual DB
 
 Modify server/storage.ts to implement actual DB integration using Drizzle ORM instead of in-memory storage.
