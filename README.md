@@ -120,10 +120,10 @@ Client requests to /api will be proxied to the backend.
 4. Production Build and Run
 To build and run the project for production deployment:
 
-# Build client and server
+ Build client and server
 npm run build
 
-# Run the built server
+ Run the built server
 npm run start
 
 5. GitHub Repository Setup
