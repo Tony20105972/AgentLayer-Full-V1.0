@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const nodeCategories = [
@@ -6,7 +5,8 @@ const nodeCategories = [
     title: '🚀 Control Nodes',
     nodes: [
       { type: 'start', label: 'Start', icon: '🎬', description: 'Workflow entry point' },
-      { type: 'mcp', label: 'MCP Controller', icon: '🧠', description: 'Main Control Plane' },
+      { type: 'control', label: 'Control Center', icon: '🎯', description: 'Main Control Plane' },
+      { type: 'mcp', label: 'MCP Controller', icon: '🧠', description: 'Master Control Processor' },
       { type: 'condition', label: 'Condition', icon: '🔀', description: 'Conditional branching' },
       { type: 'end', label: 'End', icon: '🏁', description: 'Workflow termination' }
     ]
@@ -16,7 +16,8 @@ const nodeCategories = [
     nodes: [
       { type: 'aichat', label: 'AI Chat', icon: '💬', description: 'AI conversation node' },
       { type: 'rag', label: 'RAG Query', icon: '📚', description: 'Knowledge retrieval' },
-      { type: 'embedding', label: 'Embedding', icon: '🔢', description: 'Text vectorization' }
+      { type: 'embedding', label: 'Embedding', icon: '🔢', description: 'Text vectorization' },
+      { type: 'queryContext', label: 'Query Context', icon: '🔍', description: 'Context-aware search' }
     ]
   },
   {
@@ -24,15 +25,23 @@ const nodeCategories = [
     nodes: [
       { type: 'api', label: 'API Call', icon: '🌐', description: 'External API integration' },
       { type: 'webhook', label: 'Webhook', icon: '📡', description: 'HTTP webhook handler' },
-      { type: 'database', label: 'Database', icon: '🗄️', description: 'Database operations' }
+      { type: 'database', label: 'Database', icon: '🗄️', description: 'Database operations' },
+      { type: 'slack', label: 'Slack Alert', icon: '💬', description: 'Team notifications' }
     ]
   },
   {
     title: '📁 Data Nodes',
     nodes: [
-      { type: 'document', label: 'Document Upload', icon: '📄', description: 'File upload handler' },
+      { type: 'documentUpload', label: 'Document Upload', icon: '📄', description: 'File upload handler' },
+      { type: 'embedVector', label: 'Vector Embed', icon: '🔢', description: 'Text to vectors' },
       { type: 'transform', label: 'Data Transform', icon: '🔄', description: 'Data transformation' },
       { type: 'filter', label: 'Filter', icon: '🔍', description: 'Data filtering' }
+    ]
+  },
+  {
+    title: '🚀 Deployment',
+    nodes: [
+      { type: 'deploy', label: 'Auto Deploy', icon: '🚀', description: 'GitHub + Vercel deploy' }
     ]
   }
 ];
@@ -91,6 +100,9 @@ const NodeLibrary = () => {
           </button>
           <button className="w-full p-2 text-left text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
             📊 View Analytics
+          </button>
+          <button className="w-full p-2 text-left text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
+            🔄 Replay Execution
           </button>
         </div>
       </div>

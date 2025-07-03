@@ -54,6 +54,140 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
 
   const renderNodeSpecificFields = () => {
     switch (selectedNode.type) {
+      case 'control':
+        return (
+          <>
+            <div className="bg-indigo-50 p-3 rounded-lg mb-4">
+              <div className="flex items-center space-x-2 text-indigo-700">
+                <span>🎯</span>
+                <span className="font-medium">Control Center</span>
+              </div>
+              <p className="text-xs text-indigo-600 mt-1">
+                Central coordination for all workflow execution
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priorityLevel">Priority Level</Label>
+              <select 
+                id="priorityLevel"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                value={nodeConfig.priorityLevel || 'normal'}
+                onChange={(e) => handleConfigChange('priorityLevel', e.target.value)}
+              >
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </>
+        );
+
+      case 'documentUpload':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="acceptedFormats">Accepted Formats</Label>
+              <Input 
+                id="acceptedFormats"
+                value={nodeConfig.acceptedFormats || 'pdf,docx,txt'}
+                onChange={(e) => handleConfigChange('acceptedFormats', e.target.value)}
+                placeholder="pdf,docx,txt"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxFileSize">Max File Size (MB)</Label>
+              <Input 
+                id="maxFileSize"
+                type="number"
+                value={nodeConfig.maxFileSize || 10}
+                onChange={(e) => handleConfigChange('maxFileSize', parseInt(e.target.value))}
+              />
+            </div>
+          </>
+        );
+
+      case 'slack':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="slackChannel">Slack Channel</Label>
+              <Input 
+                id="slackChannel"
+                value={nodeConfig.slackChannel || '#alerts'}
+                onChange={(e) => handleConfigChange('slackChannel', e.target.value)}
+                placeholder="#alerts"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="messageTemplate">Message Template</Label>
+              <textarea 
+                id="messageTemplate"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                rows={3}
+                value={nodeConfig.messageTemplate || ''}
+                onChange={(e) => handleConfigChange('messageTemplate', e.target.value)}
+                placeholder="Alert: {{message}}"
+              />
+            </div>
+          </>
+        );
+
+      case 'deploy':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="deployTarget">Deploy Target</Label>
+              <select 
+                id="deployTarget"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                value={nodeConfig.deployTarget || 'vercel'}
+                onChange={(e) => handleConfigChange('deployTarget', e.target.value)}
+              >
+                <option value="vercel">Vercel</option>
+                <option value="netlify">Netlify</option>
+                <option value="github-pages">GitHub Pages</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="buildCommand">Build Command</Label>
+              <Input 
+                id="buildCommand"
+                value={nodeConfig.buildCommand || 'npm run build'}
+                onChange={(e) => handleConfigChange('buildCommand', e.target.value)}
+              />
+            </div>
+          </>
+        );
+
+      case 'queryContext':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="vectorStore">Vector Store</Label>
+              <select 
+                id="vectorStore"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                value={nodeConfig.vectorStore || 'pinecone'}
+                onChange={(e) => handleConfigChange('vectorStore', e.target.value)}
+              >
+                <option value="pinecone">Pinecone</option>
+                <option value="weaviate">Weaviate</option>
+                <option value="chroma">Chroma</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="topK">Top K Results</Label>
+              <Input 
+                id="topK"
+                type="number"
+                value={nodeConfig.topK || 5}
+                onChange={(e) => handleConfigChange('topK', parseInt(e.target.value))}
+              />
+            </div>
+          </>
+        );
+
       case 'aichat':
         return (
           <>
@@ -201,6 +335,15 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
                 className="rounded"
               />
               <span className="text-sm text-gray-700">Debug Breakpoint</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                checked={nodeConfig.constitutionCheck !== false}
+                onChange={(e) => handleConfigChange('constitutionCheck', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm text-gray-700">Constitution Check</span>
             </label>
           </div>
         </div>
