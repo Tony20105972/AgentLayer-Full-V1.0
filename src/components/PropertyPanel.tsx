@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Node } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
 
   useEffect(() => {
     if (selectedNode) {
-      setNodeLabel(selectedNode.data.label || '');
+      setNodeLabel(typeof selectedNode.data.label === 'string' ? selectedNode.data.label : '');
       setNodeConfig(selectedNode.data.config || {});
     }
   }, [selectedNode]);
