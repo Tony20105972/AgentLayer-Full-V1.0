@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -65,16 +64,18 @@ if __name__ == "__main__":
   };
 
   const generateNodeHandler = (node: Node) => {
+    const config = node.data.config as Record<string, any> || {};
+    
     switch (node.type) {
       case 'aichat':
         return `def ${node.id}_handler(state: AgentState) -> AgentState:
     # AI Chat handler for ${node.data.label}
-    # Prompt: ${node.data.config?.prompt || 'Default prompt'}
+    # Prompt: ${config.prompt || 'Default prompt'}
     return state`;
       case 'api':
         return `def ${node.id}_handler(state: AgentState) -> AgentState:
     # API Call handler for ${node.data.label}
-    # URL: ${node.data.config?.url || 'No URL specified'}
+    # URL: ${config.url || 'No URL specified'}
     return state`;
       default:
         return `def ${node.id}_handler(state: AgentState) -> AgentState:
