@@ -7,33 +7,32 @@ const RuleCheckerNode = ({ data }: { data: any }) => {
   const hasViolations = data.config?.hasViolations || false;
 
   return (
-    <div className={`px-4 py-3 rounded-lg shadow-lg border-2 border-white min-w-[180px] relative ${
+    <div className={`w-[200px] h-[80px] rounded-lg shadow-lg border-2 border-white flex items-center justify-between px-4 relative ${
       hasViolations 
-        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+        : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
     }`}>
-      <div className="flex items-center justify-center space-x-2 mb-2">
-        <span className="text-lg">🛡️</span>
-        <span className="font-medium text-sm">{data.label || 'Rule Checker'}</span>
-      </div>
-      <div className="text-xs text-center mb-2">
-        {ruleCount} Rules Active
-      </div>
-      {hasViolations && (
-        <div className="text-xs text-center text-red-100">
-          ⚠️ Violations Detected
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+          <span className="text-xl">🛡️</span>
         </div>
-      )}
+        <div>
+          <div className="font-semibold text-sm">{data.label || 'Rule Checker'}</div>
+          <div className={`text-xs ${hasViolations ? 'text-red-100' : 'text-green-100'}`}>
+            {ruleCount} Rules • {hasViolations ? '⚠️ Violations' : '✓ Clean'}
+          </div>
+        </div>
+      </div>
       
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-white border-2 border-green-500"
+        className="w-4 h-4 bg-white border-2 border-green-500 rounded-full shadow-md"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 bg-white border-2 border-green-500"
+        className="w-4 h-4 bg-white border-2 border-green-500 rounded-full shadow-md"
       />
     </div>
   );

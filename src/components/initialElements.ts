@@ -5,67 +5,78 @@ export const initialNodes: Node[] = [
   {
     id: 'start-1',
     type: 'start',
-    position: { x: 50, y: 100 },
+    position: { x: 50, y: 200 },
     data: { 
-      label: 'Start Node',
+      label: 'Start',
       config: {
-        initialInput: '{"message": "string", "user_id": "string"}'
+        initialInput: '{"message": "string", "user_id": "string"}',
+        apiKey: '',
+        purpose: 'AI Assistant'
       }
     },
-    deletable: false
+    deletable: false,
+    draggable: true
   },
   {
     id: 'agent-1',
     type: 'agent',
-    position: { x: 300, y: 100 },
+    position: { x: 350, y: 200 },
     data: { 
       label: 'AI Agent',
       config: {
         role: 'Assistant',
         model: 'gpt-4',
         systemPrompt: 'You are a helpful AI assistant.',
-        temperature: 0.7
+        temperature: 0.7,
+        toolsEnabled: false
       }
     },
-    deletable: false
+    deletable: false,
+    draggable: true
   },
   {
     id: 'router-1',
     type: 'router',
-    position: { x: 550, y: 100 },
+    position: { x: 650, y: 200 },
     data: { 
-      label: 'Decision Router',
+      label: 'Router',
       config: {
         conditions: [
-          { id: 'success', label: 'Success', expression: 'response.confidence > 0.8' },
-          { id: 'review', label: 'Needs Review', expression: 'response.confidence <= 0.8' }
+          { id: 'true', label: 'Success', expression: 'result.success === true' },
+          { id: 'false', label: 'Failure', expression: 'result.success === false' }
         ]
       }
     },
-    deletable: false
+    deletable: false,
+    draggable: true
   },
   {
     id: 'ruleChecker-1',
     type: 'ruleChecker',
-    position: { x: 800, y: 100 },
+    position: { x: 950, y: 150 },
     data: { 
       label: 'Rule Checker',
       config: {
-        rules: ['pii-protection', 'harmful-content', 'data-privacy'],
+        rules: ['No personal information', 'No harmful content'],
         hasViolations: false
       }
     },
-    deletable: false
+    deletable: false,
+    draggable: true
   },
   {
     id: 'end-1',
     type: 'end',
-    position: { x: 1050, y: 100 },
+    position: { x: 1250, y: 200 },
     data: { 
-      label: 'End Node',
-      config: {}
+      label: 'End',
+      config: {
+        outputFormat: 'json',
+        includeMetadata: true
+      }
     },
-    deletable: false
+    deletable: false,
+    draggable: true
   }
 ];
 
@@ -75,6 +86,7 @@ export const initialEdges: Edge[] = [
     source: 'start-1',
     target: 'agent-1',
     type: 'smoothstep',
+    style: { stroke: '#3498db', strokeWidth: 2 },
     deletable: false
   },
   {
@@ -82,14 +94,16 @@ export const initialEdges: Edge[] = [
     source: 'agent-1',
     target: 'router-1',
     type: 'smoothstep',
+    style: { stroke: '#e67e22', strokeWidth: 2 },
     deletable: false
   },
   {
     id: 'e3-4',
     source: 'router-1',
+    sourceHandle: 'true',
     target: 'ruleChecker-1',
-    sourceHandle: 'success',
     type: 'smoothstep',
+    style: { stroke: '#2ecc71', strokeWidth: 2 },
     label: 'Success',
     deletable: false
   },
@@ -98,6 +112,7 @@ export const initialEdges: Edge[] = [
     source: 'ruleChecker-1',
     target: 'end-1',
     type: 'smoothstep',
+    style: { stroke: '#7f8c8d', strokeWidth: 2 },
     deletable: false
   }
 ];

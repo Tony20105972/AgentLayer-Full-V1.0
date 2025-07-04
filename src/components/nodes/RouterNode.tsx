@@ -9,38 +9,49 @@ const RouterNode = ({ data }: { data: any }) => {
   ];
 
   return (
-    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-3 rounded-lg shadow-lg border-2 border-white min-w-[140px] relative transform rotate-45">
-      <div className="transform -rotate-45">
-        <div className="flex items-center justify-center space-x-2 mb-1">
-          <span className="text-lg">🔀</span>
-          <span className="font-medium text-sm">{data.label || 'Router'}</span>
+    <div className="relative flex items-center justify-center w-[200px] h-[80px]">
+      {/* Perfect Diamond Shape */}
+      <div className="relative w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 transform rotate-45 shadow-lg border-2 border-white rounded-lg flex items-center justify-center">
+        <div className="transform -rotate-45 text-center">
+          <div className="flex items-center justify-center space-x-1 mb-1">
+            <span className="text-lg">🔀</span>
+            <span className="font-semibold text-xs text-white">{data.label || 'Router'}</span>
+          </div>
+          <div className="text-xs text-orange-100 font-medium">Decision</div>
         </div>
-        <div className="text-xs text-center text-yellow-200">Conditional Branch</div>
       </div>
       
+      {/* Input Handle - Left */}
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-white border-2 border-yellow-500 transform -rotate-45"
-        style={{ left: '-6px', top: '50%' }}
+        className="w-3 h-3 bg-white border-2 border-orange-500 rounded-full shadow-sm"
+        style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }}
       />
       
-      {conditions.map((condition: any, index: number) => (
-        <Handle
-          key={condition.id}
-          type="source"
-          position={Position.Right}
-          id={condition.id}
-          className={`w-3 h-3 border-2 transform -rotate-45 ${
-            condition.id === 'true' ? 'bg-green-400 border-green-600' : 'bg-red-400 border-red-600'
-          }`}
-          style={{ 
-            right: '-6px', 
-            top: `${30 + (index * 40)}%`,
-            transform: 'rotate(-45deg)'
-          }}
-        />
-      ))}
+      {/* Output Handles - Right side with better positioning */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="true"
+        className="w-3 h-3 bg-green-400 border-2 border-green-600 rounded-full shadow-sm"
+        style={{ right: '20px', top: '30%', transform: 'translateY(-50%)' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="false"
+        className="w-3 h-3 bg-red-400 border-2 border-red-600 rounded-full shadow-sm"
+        style={{ right: '20px', top: '70%', transform: 'translateY(-50%)' }}
+      />
+      
+      {/* Condition Labels */}
+      <div className="absolute right-[-45px] top-[15px] text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-200">
+        True
+      </div>
+      <div className="absolute right-[-45px] top-[45px] text-xs font-medium text-red-700 bg-red-50 px-2 py-1 rounded shadow-sm border border-red-200">
+        False
+      </div>
     </div>
   );
 };

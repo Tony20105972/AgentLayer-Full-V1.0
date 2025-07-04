@@ -13,27 +13,37 @@ const NotifierNode = ({ data }: { data: any }) => {
     }
   };
 
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'slack': return 'from-green-500 to-green-600';
+      case 'telegram': return 'from-blue-500 to-blue-600';
+      case 'discord': return 'from-indigo-500 to-indigo-600';
+      case 'webhook': return 'from-purple-500 to-purple-600';
+      default: return 'from-purple-500 to-purple-600';
+    }
+  };
+
   const notifierType = data.config?.type || 'webhook';
 
   return (
-    <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-3 rounded-lg shadow-lg border-2 border-white min-w-[180px] relative">
-      <div className="flex items-center justify-center space-x-2 mb-2">
-        <span className="text-lg">{getIcon(notifierType)}</span>
-        <span className="font-medium text-sm">{data.label || 'Notifier'}</span>
-      </div>
-      <div className="text-xs text-center text-purple-100 mb-1">
-        {notifierType.toUpperCase()}
-      </div>
-      {data.config?.channel && (
-        <div className="text-xs text-center text-pink-200 truncate">
-          {data.config.channel}
+    <div className={`w-[200px] h-[80px] bg-gradient-to-r ${getTypeColor(notifierType)} text-white rounded-lg shadow-lg border-2 border-white flex items-center justify-between px-4 relative`}>
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+          <span className="text-xl">{getIcon(notifierType)}</span>
         </div>
-      )}
+        <div className="flex-1">
+          <div className="font-semibold text-sm truncate">{data.label || 'Notifier'}</div>
+          <div className="text-xs text-purple-100 truncate">
+            {notifierType.charAt(0).toUpperCase() + notifierType.slice(1)}
+            {data.config?.channel && ` • ${data.config.channel}`}
+          </div>
+        </div>
+      </div>
       
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-white border-2 border-purple-500"
+        className="w-4 h-4 bg-white border-2 border-purple-500 rounded-full shadow-md"
       />
     </div>
   );

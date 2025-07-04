@@ -110,6 +110,8 @@ const AgentBuilder = () => {
         if (sourceNode && validSources.includes(sourceNode.type)) {
           const edge = addEdge({
             ...params,
+            type: 'smoothstep',
+            style: { stroke: '#9b59b6', strokeWidth: 2 },
             label: params.sourceHandle && params.sourceHandle !== 'default' ? params.sourceHandle : undefined
           }, edges);
           setEdges(edge);
@@ -118,6 +120,8 @@ const AgentBuilder = () => {
         // Allow connections for the main flow
         const edge = addEdge({
           ...params,
+          type: 'smoothstep',
+          style: { stroke: '#3498db', strokeWidth: 2 },
           label: params.sourceHandle && params.sourceHandle !== 'default' ? params.sourceHandle : undefined
         }, edges);
         setEdges(edge);
@@ -159,7 +163,7 @@ const AgentBuilder = () => {
         type,
         position,
         data: { 
-          label: `${type} Node`,
+          label: `Notifier`,
           config: {
             type: 'webhook',
             webhookUrl: '',
@@ -183,7 +187,7 @@ const AgentBuilder = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Top Input Area */}
       <TopInputArea 
         config={globalConfig}
@@ -193,7 +197,7 @@ const AgentBuilder = () => {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Node Library */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="w-72 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-sm">
           <NodeLibrary />
         </div>
 
@@ -211,16 +215,36 @@ const AgentBuilder = () => {
             nodeTypes={nodeTypes}
             connectionMode={ConnectionMode.Loose}
             fitView
-            className="bg-gray-50"
+            className="bg-gradient-to-br from-slate-50 to-blue-50"
+            snapToGrid={true}
+            snapGrid={[20, 20]}
           >
-            <Background />
-            <Controls />
+            <Background 
+              variant="dots" 
+              gap={20} 
+              size={1} 
+              color="#e2e8f0"
+            />
+            <Controls 
+              className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-lg"
+            />
             <MiniMap 
               nodeStrokeColor="#374151"
-              nodeColor="#f9fafb"
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case 'start': return '#10b981';
+                  case 'agent': return '#3b82f6';
+                  case 'router': return '#f59e0b';
+                  case 'ruleChecker': return '#10b981';
+                  case 'end': return '#6b7280';
+                  case 'notifier': return '#8b5cf6';
+                  default: return '#f9fafb';
+                }
+              }}
               nodeBorderRadius={8}
               pannable
               zoomable
+              className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-lg"
             />
           </ReactFlow>
 
@@ -242,7 +266,7 @@ const AgentBuilder = () => {
         </div>
 
         {/* Right Panel - Properties */}
-        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div className="w-80 bg-white/80 backdrop-blur-sm border-l border-gray-200/50 flex flex-col shadow-sm">
           <PropertyPanel 
             selectedNode={selectedNode} 
             onUpdateNode={(nodeId, updates) => {
