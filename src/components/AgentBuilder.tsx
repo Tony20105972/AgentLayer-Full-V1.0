@@ -250,7 +250,7 @@ const AgentBuilder = () => {
               <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
               <div className="text-lg font-semibold text-gray-900">Executing Workflow</div>
               <div className="text-sm text-gray-600">
-                Current: {currentNodeId ? nodes.find(n => n.id === currentNodeId)?.data.label : 'Initializing...'}
+                Current: {currentNodeId ? (nodes.find(n => n.id === currentNodeId)?.data?.label as string) || 'Unknown' : 'Initializing...'}
               </div>
               <div className="text-xs text-gray-500 mt-2">
                 Step {executionSteps.length} of {executionPath.length}

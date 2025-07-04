@@ -30,15 +30,26 @@ const StatePreviewPanel: React.FC<StatePreviewPanelProps> = ({ selectedNode, exe
     .filter(step => step.nodeId === selectedNode.id)
     .sort((a, b) => b.timestamp - a.timestamp)[0];
 
-  const inputState = nodeStep?.input || selectedNode.data.config?.inputState || {};
-  const outputState = nodeStep?.output || selectedNode.data.config?.outputState || {};
+  // Type guard and safe access to config properties
+  const nodeConfig = selectedNode.data?.config;
+  const configInputState = nodeConfig && typeof nodeConfig === 'object' && 'inputState' in nodeConfig 
+    ? nodeConfig.inputState as Record<string, any> 
+    : {};
+  const configOutputState = nodeConfig && typeof nodeConfig === 'object' && 'outputState' in nodeConfig 
+    ? nodeConfig.outputState as Record<string, any> 
+    : {};
+
+  const inputState = nodeStep?.input || configInputState || {};
+  const outputState = nodeStep?.output || configOutputState || {};
 
   return (
     <div className="p-4 h-full flex flex-col">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Node State</h3>
         <div className="bg-gray-50 p-3 rounded-lg">
-          <div className="text-sm text-gray-600">Node: <span className="font-medium">{selectedNode.data.label}</span></div>
+          <div className="text-sm text-gray-600">
+            Node: <span className="font-medium">{selectedNode.data?.label || selectedNode.id}</span>
+          </div>
           <div className="text-sm text-gray-600">Type: <span className="font-mono text-xs">{selectedNode.type}</span></div>
           {nodeStep && (
             <div className="text-sm text-gray-600">
