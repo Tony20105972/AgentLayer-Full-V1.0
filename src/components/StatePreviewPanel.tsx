@@ -42,13 +42,18 @@ const StatePreviewPanel: React.FC<StatePreviewPanelProps> = ({ selectedNode, exe
   const inputState = nodeStep?.input || configInputState || {};
   const outputState = nodeStep?.output || configOutputState || {};
 
+  // Safe label access
+  const nodeLabel = selectedNode.data?.label 
+    ? String(selectedNode.data.label) 
+    : selectedNode.id;
+
   return (
     <div className="p-4 h-full flex flex-col">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Node State</h3>
         <div className="bg-gray-50 p-3 rounded-lg">
           <div className="text-sm text-gray-600">
-            Node: <span className="font-medium">{selectedNode.data?.label || selectedNode.id}</span>
+            Node: <span className="font-medium">{nodeLabel}</span>
           </div>
           <div className="text-sm text-gray-600">Type: <span className="font-mono text-xs">{selectedNode.type}</span></div>
           {nodeStep && (
