@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
@@ -12,6 +11,7 @@ import {
   Edge,
   Node,
   ConnectionMode,
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -220,7 +220,7 @@ const AgentBuilder = () => {
             snapGrid={[20, 20]}
           >
             <Background 
-              variant="dots" 
+              variant={BackgroundVariant.Dots}
               gap={20} 
               size={1} 
               color="#e2e8f0"
