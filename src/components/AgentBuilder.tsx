@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   addEdge,
@@ -17,36 +18,75 @@ import '@xyflow/react/dist/style.css';
 import NodeLibrary from './NodeLibrary';
 import PropertyPanel from './PropertyPanel';
 import ExecutionPanel from './ExecutionPanel';
+import StatePreviewPanel from './StatePreviewPanel';
 import ConstitutionPanel from './ConstitutionPanel';
-import StatePanel from './StatePanel';
 import ConstitutionEngine from './ConstitutionEngine';
 import ExportModal from './ExportModal';
 import { nodeTypes } from './nodes';
 import { initialNodes, initialEdges } from './initialElements';
-import { useAgentState } from '@/hooks/useAgentState';
+import { useExecutionFlow } from '@/hooks/useExecutionFlow';
 
 const AgentBuilder = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [activePanel, setActivePanel] = useState<'properties' | 'execution' | 'constitution' | 'state'>('properties');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionLogs, setExecutionLogs] = useState<string[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
 
   const {
-    memoryChain,
-    executionState,
-    addState,
-    updateGlobalContext,
+    isExecuting,
+    currentNodeId,
+    executionSteps,
+    executionPath,
     startExecution,
-    moveToNextNode,
-    stopExecution
-  } = useAgentState();
+    stopExecution,
+    clearExecution
+  } = useExecutionFlow();
+
+  // Highlight current executing node
+  useEffect(() => {
+    setNodes(nds => nds.map(node => ({
+      ...node,
+      style: {
+        ...node.style,
+        border: currentNodeId === node.id ? '3px solid #3b82f6' : undefined,
+        boxShadow: currentNodeId === node.id ? '0 0 20px rgba(59, 130, 246, 0.5)' : undefined
+      }
+    })));
+  }, [currentNodeId, setNodes]);
+
+  // Highlight nodes based on execution results
+  useEffect(() => {
+    setNodes(nds => nds.map(node => {
+      const nodeStep = executionSteps.find(step => step.nodeId === node.id);
+      if (nodeStep) {
+        let borderColor = '#3b82f6'; // default blue
+        if (nodeStep.status === 'success') borderColor = '#10b981'; // green
+        else if (nodeStep.status === 'failure') borderColor = '#ef4444'; // red
+        else if (nodeStep.status === 'violation') borderColor = '#f59e0b'; // orange
+        
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            border: `2px solid ${borderColor}`,
+            boxShadow: `0 0 10px ${borderColor}40`
+          }
+        };
+      }
+      return node;
+    }));
+  }, [executionSteps, setNodes]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      const edge = addEdge({
+        ...params,
+        label: params.sourceHandle && params.sourceHandle !== 'default' ? params.sourceHandle : undefined
+      }, edges);
+      setEdges(edge);
+    },
+    [setEdges, edges]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -89,51 +129,21 @@ const AgentBuilder = () => {
   );
 
   const executeWorkflow = async () => {
-    setIsExecuting(true);
-    setExecutionLogs(['🚀 Starting AgentLayer execution...']);
-    
-    const startNode = nodes.find(node => node.type === 'start');
-    if (startNode) {
-      startExecution(startNode.id);
-      
-      // 시뮬레이션된 실행 로직 - 실제로는 백엔드 MCP와 연동
-      for (let i = 0; i < nodes.length; i++) {
-        const currentNode = nodes[i];
-        moveToNextNode(currentNode.id);
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // State 추가
-        const state = {
-          id: `state-${Date.now()}-${i}`,
-          timestamp: Date.now(),
-          nodeId: currentNode.id,
-          input: { message: `Input for ${currentNode.data.label}` },
-          output: { result: `Output from ${currentNode.data.label}` },
-          metadata: {
-            executionTime: Math.random() * 1000,
-            constitutionViolations: [],
-            nodeType: currentNode.type || 'unknown'
-          }
-        };
-        
-        addState(state);
-        setExecutionLogs(prev => [...prev, `✅ Executed node: ${currentNode.data.label} (${state.metadata.executionTime.toFixed(0)}ms)`]);
-      }
-    }
-    
-    setExecutionLogs(prev => [...prev, '🎉 AgentLayer workflow execution completed!']);
-    stopExecution();
-    setIsExecuting(false);
+    await startExecution(nodes, edges);
   };
 
   const handleConstitutionViolation = (violation: { ruleId: string; message: string; nodeId: string }) => {
-    setExecutionLogs(prev => [...prev, `⚠️ Constitution violation: ${violation.message}`]);
-    
-    // 노드를 빨간색으로 하이라이트
+    // Find and highlight the violating node
     setNodes(nds => nds.map(node => 
       node.id === violation.nodeId 
-        ? { ...node, style: { ...node.style, border: '2px solid #ef4444' } }
+        ? { 
+            ...node, 
+            style: { 
+              ...node.style, 
+              border: '3px solid #f59e0b',
+              boxShadow: '0 0 15px rgba(245, 158, 11, 0.6)'
+            } 
+          }
         : node
     ));
   };
@@ -154,6 +164,14 @@ const AgentBuilder = () => {
       condition: 'harmful',
       action: 'warn' as const,
       description: 'Detect and prevent harmful or discriminatory content',
+      enabled: true
+    },
+    {
+      id: 'data-privacy',
+      name: 'Data Privacy Compliance',
+      condition: 'privacy',
+      action: 'log' as const,
+      description: 'Ensure compliance with data privacy regulations',
       enabled: true
     }
   ];
@@ -187,27 +205,31 @@ const AgentBuilder = () => {
             nodeStrokeColor="#374151"
             nodeColor="#f9fafb"
             nodeBorderRadius={8}
+            pannable
+            zoomable
           />
         </ReactFlow>
 
-        {/* 실행 및 내보내기 버튼 */}
+        {/* 상단 액션 버튼들 */}
         <div className="absolute top-4 right-4 z-10 space-x-2 flex">
           <button
             onClick={() => setShowExportModal(true)}
-            className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-700 text-white shadow-lg transition-all"
+            className="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-700 text-white shadow-lg transition-all flex items-center space-x-2"
           >
-            📤 Export MCP
+            <span>📤</span>
+            <span>Export MCP</span>
           </button>
           <button
             onClick={executeWorkflow}
             disabled={isExecuting}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center space-x-2 ${
               isExecuting
                 ? 'bg-gray-400 cursor-not-allowed text-white'
                 : 'bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white shadow-lg'
             }`}
           >
-            {isExecuting ? '🔄 Executing...' : '▶️ Execute Agent'}
+            <span>{isExecuting ? '🔄' : '▶️'}</span>
+            <span>{isExecuting ? 'Executing...' : 'Execute Workflow'}</span>
           </button>
         </div>
 
@@ -220,6 +242,22 @@ const AgentBuilder = () => {
             />
           </div>
         </div>
+
+        {/* Execution Status Overlay */}
+        {isExecuting && (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+            <div className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-6 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <div className="text-lg font-semibold text-gray-900">Executing Workflow</div>
+              <div className="text-sm text-gray-600">
+                Current: {currentNodeId ? nodes.find(n => n.id === currentNodeId)?.data.label : 'Initializing...'}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Step {executionSteps.length} of {executionPath.length}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 우측 패널 */}
@@ -260,15 +298,17 @@ const AgentBuilder = () => {
             />
           )}
           {activePanel === 'state' && (
-            <StatePanel 
-              memoryChain={memoryChain}
-              executionState={executionState}
+            <StatePreviewPanel 
+              selectedNode={selectedNode}
+              executionSteps={executionSteps}
             />
           )}
           {activePanel === 'execution' && (
             <ExecutionPanel 
-              executionLogs={executionLogs}
+              executionSteps={executionSteps}
               isExecuting={isExecuting}
+              onClearLogs={clearExecution}
+              onStopExecution={stopExecution}
             />
           )}
           {activePanel === 'constitution' && <ConstitutionPanel />}

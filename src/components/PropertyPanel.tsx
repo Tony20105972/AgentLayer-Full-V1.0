@@ -38,6 +38,28 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
     }
   };
 
+  const handleConditionChange = (index: number, field: string, value: string) => {
+    const conditions = [...(nodeConfig.conditions || [])];
+    conditions[index] = { ...conditions[index], [field]: value };
+    handleConfigChange('conditions', conditions);
+  };
+
+  const addCondition = () => {
+    const conditions = nodeConfig.conditions || [];
+    const newCondition = {
+      id: `condition-${Date.now()}`,
+      label: 'New Condition',
+      expression: 'state.value == "default"'
+    };
+    handleConfigChange('conditions', [...conditions, newCondition]);
+  };
+
+  const removeCondition = (index: number) => {
+    const conditions = [...(nodeConfig.conditions || [])];
+    conditions.splice(index, 1);
+    handleConfigChange('conditions', conditions);
+  };
+
   if (!selectedNode) {
     return (
       <div className="p-6 text-center">
@@ -54,6 +76,158 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
 
   const renderNodeSpecificFields = () => {
     switch (selectedNode.type) {
+      case 'condition':
+      case 'router':
+        return (
+          <>
+            <div className="bg-yellow-50 p-3 rounded-lg mb-4">
+              <div className="flex items-center space-x-2 text-yellow-700">
+                <span>🔀</span>
+                <span className="font-medium">Conditional Logic Node</span>
+              </div>
+              <p className="text-xs text-yellow-600 mt-1">
+                Define conditions to route workflow execution
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Conditions</Label>
+                <button
+                  onClick={addCondition}
+                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                >
+                  + Add
+                </button>
+              </div>
+              
+              {(nodeConfig.conditions || []).map((condition: any, index: number) => (
+                <div key={condition.id || index} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Condition {index + 1}</span>
+                    <button
+                      onClick={() => removeCondition(index)}
+                      className="text-red-500 hover:text-red-700 text-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`condition-label-${index}`}>Label</Label>
+                    <Input
+                      id={`condition-label-${index}`}
+                      value={condition.label || ''}
+                      onChange={(e) => handleConditionChange(index, 'label', e.target.value)}
+                      placeholder="e.g., Success, Failure, Error"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`condition-expr-${index}`}>Expression</Label>
+                    <Input
+                      id={`condition-expr-${index}`}
+                      value={condition.expression || ''}
+                      onChange={(e) => handleConditionChange(index, 'expression', e.target.value)}
+                      placeholder="e.g., state.status == 'OK'"
+                    />
+                  </div>
+                </div>
+              ))}
+              
+              {(!nodeConfig.conditions || nodeConfig.conditions.length === 0) && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No conditions defined. Click "Add" to create your first condition.
+                </div>
+              )}
+            </div>
+          </>
+        );
+
+      case 'aichat':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="model">AI Model</Label>
+              <select 
+                id="model"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                value={nodeConfig.model || 'gpt-4'}
+                onChange={(e) => handleConfigChange('model', e.target.value)}
+              >
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="claude-3">Claude 3</option>
+                <option value="gemini-pro">Gemini Pro</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prompt">System Prompt</Label>
+              <textarea 
+                id="prompt"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                rows={4}
+                value={nodeConfig.prompt || ''}
+                onChange={(e) => handleConfigChange('prompt', e.target.value)}
+                placeholder="Enter system prompt for the AI agent..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="temperature">Temperature</Label>
+              <Input 
+                id="temperature"
+                type="number"
+                min="0"
+                max="2"
+                step="0.1"
+                value={nodeConfig.temperature || 0.7}
+                onChange={(e) => handleConfigChange('temperature', parseFloat(e.target.value))}
+              />
+            </div>
+          </>
+        );
+      
+      case 'api':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="url">API URL</Label>
+              <Input 
+                id="url"
+                value={nodeConfig.url || ''}
+                onChange={(e) => handleConfigChange('url', e.target.value)}
+                placeholder="https://api.example.com/endpoint"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="method">HTTP Method</Label>
+              <select 
+                id="method"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                value={nodeConfig.method || 'GET'}
+                onChange={(e) => handleConfigChange('method', e.target.value)}
+              >
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="headers">Headers (JSON)</Label>
+              <textarea 
+                id="headers"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm font-mono"
+                rows={3}
+                value={nodeConfig.headers || '{}'}
+                onChange={(e) => handleConfigChange('headers', e.target.value)}
+                placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+              />
+            </div>
+          </>
+        );
+
       case 'control':
         return (
           <>
@@ -184,65 +358,6 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNod
                 value={nodeConfig.topK || 5}
                 onChange={(e) => handleConfigChange('topK', parseInt(e.target.value))}
               />
-            </div>
-          </>
-        );
-
-      case 'aichat':
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="model">AI Model</Label>
-              <select 
-                id="model"
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                value={nodeConfig.model || 'gpt-4'}
-                onChange={(e) => handleConfigChange('model', e.target.value)}
-              >
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="claude-3">Claude 3</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="prompt">System Prompt</Label>
-              <textarea 
-                id="prompt"
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                rows={4}
-                value={nodeConfig.prompt || ''}
-                onChange={(e) => handleConfigChange('prompt', e.target.value)}
-                placeholder="Enter system prompt..."
-              />
-            </div>
-          </>
-        );
-      
-      case 'api':
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="url">API URL</Label>
-              <Input 
-                id="url"
-                value={nodeConfig.url || ''}
-                onChange={(e) => handleConfigChange('url', e.target.value)}
-                placeholder="https://api.example.com/endpoint"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="method">HTTP Method</Label>
-              <select 
-                id="method"
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                value={nodeConfig.method || 'GET'}
-                onChange={(e) => handleConfigChange('method', e.target.value)}
-              >
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-              </select>
             </div>
           </>
         );
