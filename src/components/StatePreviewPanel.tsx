@@ -59,7 +59,7 @@ const StatePreviewPanel: React.FC<StatePreviewPanelProps> = ({ selectedNode, exe
                 nodeStep.status === 'violation' ? 'text-orange-600' :
                 'text-blue-600'
               }`}>
-                {nodeStep.status}
+                {String(nodeStep.status)}
               </span>
             </div>
           )}
