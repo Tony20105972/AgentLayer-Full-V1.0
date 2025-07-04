@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const nodeCategories = [
@@ -7,15 +8,16 @@ const nodeCategories = [
       { type: 'start', label: 'Start', icon: '🎬', description: 'Workflow entry point' },
       { type: 'control', label: 'Control Center', icon: '🎯', description: 'Main Control Plane' },
       { type: 'mcp', label: 'MCP Controller', icon: '🧠', description: 'Master Control Processor' },
-      { type: 'condition', label: 'Condition', icon: '🔀', description: 'Conditional branching' },
+      { type: 'router', label: 'Router', icon: '🔀', description: 'Conditional routing logic' },
+      { type: 'condition', label: 'Condition', icon: '❓', description: 'Simple conditional branching' },
       { type: 'end', label: 'End', icon: '🏁', description: 'Workflow termination' }
     ]
   },
   {
-    title: '🤖 AI Nodes',
+    title: '🤖 AI Agent Nodes',
     nodes: [
-      { type: 'aichat', label: 'AI Chat', icon: '💬', description: 'AI conversation node' },
-      { type: 'rag', label: 'RAG Query', icon: '📚', description: 'Knowledge retrieval' },
+      { type: 'aichat', label: 'AI Agent', icon: '🤖', description: 'Intelligent agent with LLM' },
+      { type: 'rag', label: 'RAG Query', icon: '📚', description: 'Knowledge retrieval agent' },
       { type: 'embedding', label: 'Embedding', icon: '🔢', description: 'Text vectorization' },
       { type: 'queryContext', label: 'Query Context', icon: '🔍', description: 'Context-aware search' }
     ]
