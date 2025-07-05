@@ -12,13 +12,14 @@ export const usePromptToBlocks = () => {
 
   const generateFromPrompt = useCallback(async (prompt: string): Promise<BlockStructure> => {
     setIsGenerating(true);
+    console.log('Generating blocks from prompt:', prompt);
     
     try {
       // Simulate API call to analyze prompt and generate structure
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Simple prompt analysis for demo
       const structure = analyzePromptStructure(prompt);
+      console.log('Generated structure:', structure);
       return structure;
       
     } catch (error) {
@@ -116,35 +117,37 @@ function analyzePromptStructure(prompt: string): BlockStructure {
     currentX += 300;
   }
 
-  // Add router for decision making
-  const routerNode: Node = {
-    id: 'router-1',
-    type: 'router',
-    position: { x: currentX, y: 200 },
-    data: {
-      label: 'Router',
-      config: {
-        conditions: [
-          { id: 'success', label: 'Success', expression: 'result.success === true' },
-          { id: 'failure', label: 'Failure', expression: 'result.success === false' }
-        ]
+  // Add router for decision making if we have multiple paths
+  if (nodes.length > 2) {
+    const routerNode: Node = {
+      id: 'router-1',
+      type: 'router',
+      position: { x: currentX, y: 200 },
+      data: {
+        label: 'Router',
+        config: {
+          conditions: [
+            { id: 'success', label: 'Success', expression: 'result.success === true' },
+            { id: 'failure', label: 'Failure', expression: 'result.success === false' }
+          ]
+        }
       }
-    }
-  };
-  nodes.push(routerNode);
-  
-  const prevNode = nodes[nodes.length - 2];
-  edges.push({
-    id: `e-${prevNode.id}-router-1`,
-    source: prevNode.id,
-    target: 'router-1',
-    type: 'smoothstep',
-    style: { stroke: '#e67e22', strokeWidth: 2 }
-  });
-  
-  currentX += 300;
+    };
+    nodes.push(routerNode);
+    
+    const prevNode = nodes[nodes.length - 2];
+    edges.push({
+      id: `e-${prevNode.id}-router-1`,
+      source: prevNode.id,
+      target: 'router-1',
+      type: 'smoothstep',
+      style: { stroke: '#e67e22', strokeWidth: 2 }
+    });
+    
+    currentX += 300;
+  }
 
-  // Add rule checker
+  // Add rule checker if constitutional monitoring is implied
   const ruleCheckerNode: Node = {
     id: 'ruleChecker-1',
     type: 'ruleChecker',
@@ -159,14 +162,17 @@ function analyzePromptStructure(prompt: string): BlockStructure {
   };
   nodes.push(ruleCheckerNode);
   
+  const prevNode = nodes[nodes.length - 2];
+  const sourceHandle = prevNode.type === 'router' ? 'success' : undefined;
+  
   edges.push({
-    id: 'e-router-ruleChecker',
-    source: 'router-1',
-    sourceHandle: 'success',
+    id: `e-${prevNode.id}-ruleChecker`,
+    source: prevNode.id,
+    sourceHandle,
     target: 'ruleChecker-1',
     type: 'smoothstep',
     style: { stroke: '#2ecc71', strokeWidth: 2 },
-    label: 'Success'
+    label: sourceHandle ? 'Success' : undefined
   });
   
   currentX += 300;

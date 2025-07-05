@@ -36,23 +36,8 @@ export const useWorkflowExecution = () => {
     setExecutionSteps([]);
     
     try {
-      // Simulate API call to /run-agent
-      const workflowData = {
-        nodes: nodes.map(node => ({
-          id: node.id,
-          type: node.type,
-          data: node.data,
-          position: node.position
-        })),
-        edges: edges.map(edge => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle
-        }))
-      };
-
+      console.log('Starting workflow execution with nodes:', nodes.length, 'edges:', edges.length);
+      
       // Simulate execution steps
       const orderedNodes = getExecutionOrder(nodes, edges);
       
@@ -108,6 +93,7 @@ export const useWorkflowExecution = () => {
       };
 
       setLastResult(result);
+      console.log('Workflow execution completed:', result);
       return result;
 
     } catch (error) {
@@ -121,9 +107,10 @@ export const useWorkflowExecution = () => {
 
   const replayExecution = useCallback(async (uuid: string) => {
     setIsReplaying(true);
+    console.log('Starting replay for execution:', uuid);
     
     try {
-      // Simulate API call to /replay/{uuid}
+      // Use stored execution steps for replay
       const replayData = executionSteps;
       
       for (const step of replayData) {
