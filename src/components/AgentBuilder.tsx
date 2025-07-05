@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
@@ -14,94 +15,106 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import NodeLibrary from './NodeLibrary';
 import PropertyPanel from './PropertyPanel';
-import TopInputArea from './TopInputArea';
-import BottomStatusArea from './BottomStatusArea';
-import ExportModal from './ExportModal';
+import PromptInputArea from './PromptInputArea';
+import ExecutionPanel from './ExecutionPanel';
+import SlackWebhookModal from './SlackWebhookModal';
+import ReportCard from './ReportCard';
 import { nodeTypes } from './nodes';
 import { initialNodes, initialEdges } from './initialElements';
-import { useExecutionFlow } from '@/hooks/useExecutionFlow';
+import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
+import { usePromptToBlocks } from '@/hooks/usePromptToBlocks';
 
 const AgentBuilder = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [showSlackModal, setShowSlackModal] = useState(false);
   
-  // Top input area configuration
-  const [globalConfig, setGlobalConfig] = useState({
-    apiKey: '',
-    purpose: '',
-    description: '',
-    rules: ['Never share personal information', 'Avoid harmful content', 'Respect privacy']
-  });
-
-  // Constitution violations state
-  const [violations, setViolations] = useState<Array<{ nodeId: string; message: string; ruleId: string }>>([]);
-
   const {
     isExecuting,
-    currentNodeId,
+    isReplaying,
+    currentStep,
     executionSteps,
-    executionPath,
-    startExecution,
-    stopExecution,
-    clearExecution
-  } = useExecutionFlow();
+    lastResult,
+    executeWorkflow,
+    replayExecution
+  } = useWorkflowExecution();
 
-  // Highlight current executing node
+  const { isGenerating, generateFromPrompt } = usePromptToBlocks();
+
+  // Highlight current executing/replaying node
   useEffect(() => {
     setNodes(nds => nds.map(node => ({
       ...node,
       style: {
         ...node.style,
-        border: currentNodeId === node.id ? '3px solid #3b82f6' : undefined,
-        boxShadow: currentNodeId === node.id ? '0 0 20px rgba(59, 130, 246, 0.5)' : undefined
+        border: currentStep === node.id 
+          ? (isReplaying ? '3px solid #f59e0b' : '3px solid #3b82f6')
+          : undefined,
+        boxShadow: currentStep === node.id 
+          ? (isReplaying ? '0 0 20px rgba(245, 158, 11, 0.5)' : '0 0 20px rgba(59, 130, 246, 0.5)')
+          : undefined
       }
     })));
-  }, [currentNodeId, setNodes]);
+  }, [currentStep, isReplaying, setNodes]);
 
-  // Highlight nodes based on execution results and violations
+  // Highlight nodes based on execution results
   useEffect(() => {
     setNodes(nds => nds.map(node => {
       const nodeStep = executionSteps.find(step => step.nodeId === node.id);
-      const hasViolation = violations.some(v => v.nodeId === node.id);
-      
-      if (hasViolation) {
-        return {
-          ...node,
-          style: {
-            ...node.style,
-            border: '3px solid #ef4444',
-            boxShadow: '0 0 15px rgba(239, 68, 68, 0.6)'
-          }
-        };
-      }
       
       if (nodeStep) {
         let borderColor = '#3b82f6';
-        if (nodeStep.status === 'success') borderColor = '#10b981';
-        else if (nodeStep.status === 'failure') borderColor = '#ef4444';
-        else if (nodeStep.status === 'violation') borderColor = '#f59e0b';
+        let shadowColor = 'rgba(59, 130, 246, 0.4)';
+        
+        if (nodeStep.status === 'success') {
+          borderColor = '#10b981';
+          shadowColor = 'rgba(16, 185, 129, 0.4)';
+        } else if (nodeStep.status === 'error') {
+          borderColor = '#ef4444';
+          shadowColor = 'rgba(239, 68, 68, 0.4)';
+        } else if (nodeStep.status === 'violation') {
+          borderColor = '#f59e0b';
+          shadowColor = 'rgba(245, 158, 11, 0.4)';
+        }
         
         return {
           ...node,
           style: {
             ...node.style,
-            border: `2px solid ${borderColor}`,
-            boxShadow: `0 0 10px ${borderColor}40`
+            border: currentStep === node.id ? node.style?.border : `2px solid ${borderColor}`,
+            boxShadow: currentStep === node.id ? node.style?.boxShadow : `0 0 10px ${shadowColor}`
           }
         };
       }
       return node;
     }));
-  }, [executionSteps, violations, setNodes]);
+  }, [executionSteps, currentStep, setNodes]);
+
+  const handlePromptSubmit = async (prompt: string) => {
+    try {
+      const structure = await generateFromPrompt(prompt);
+      setNodes(structure.nodes);
+      setEdges(structure.edges);
+    } catch (error) {
+      console.error('Failed to generate workflow:', error);
+    }
+  };
+
+  const handleExecute = async () => {
+    return await executeWorkflow(nodes, edges);
+  };
+
+  const handleReplay = async (uuid: string) => {
+    await replayExecution(uuid);
+  };
 
   const onConnect = useCallback(
     (params: Connection) => {
-      // Allow connections only if target is notifier, end, or router
       const targetNode = nodes.find(n => n.id === params.target);
       const sourceNode = nodes.find(n => n.id === params.source);
       
@@ -117,7 +130,6 @@ const AgentBuilder = () => {
           setEdges(edge);
         }
       } else {
-        // Allow connections for the main flow
         const edge = addEdge({
           ...params,
           type: 'smoothstep',
@@ -148,7 +160,6 @@ const AgentBuilder = () => {
         return;
       }
 
-      // Only allow notifier nodes to be dropped
       if (type !== 'notifier') {
         return;
       }
@@ -178,20 +189,12 @@ const AgentBuilder = () => {
     [setNodes]
   );
 
-  const executeWorkflow = async () => {
-    await startExecution(nodes, edges);
-  };
-
-  const handleExportMCP = () => {
-    setShowExportModal(true);
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Top Input Area */}
-      <TopInputArea 
-        config={globalConfig}
-        onConfigChange={setGlobalConfig}
+      {/* Top Prompt Input Area */}
+      <PromptInputArea 
+        onPromptSubmit={handlePromptSubmit}
+        isLoading={isGenerating}
       />
 
       {/* Main Content Area */}
@@ -248,21 +251,43 @@ const AgentBuilder = () => {
             />
           </ReactFlow>
 
-          {/* Execution Status Overlay */}
-          {isExecuting && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-              <div className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-6 text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <div className="text-lg font-semibold text-gray-900">Executing Agent Workflow</div>
-                <div className="text-sm text-gray-600">
-                  Current: {currentNodeId ? (nodes.find(n => n.id === currentNodeId)?.data?.label as string) || 'Unknown' : 'Initializing...'}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Step {executionSteps.length} of {executionPath.length}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Generation Status Overlay */}
+          <AnimatePresence>
+            {isGenerating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/20 flex items-center justify-center z-20"
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-6 text-center"
+                >
+                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="text-lg font-semibold text-gray-900">Generating Workflow</div>
+                  <div className="text-sm text-gray-600">
+                    Analyzing prompt and creating blocks...
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Report Card Overlay */}
+          <AnimatePresence>
+            {lastResult && !isExecuting && !isReplaying && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 50 }}
+                className="absolute top-4 right-4 z-10 max-w-md"
+              >
+                <ReportCard executionResult={lastResult} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right Panel - Properties */}
@@ -278,29 +303,21 @@ const AgentBuilder = () => {
         </div>
       </div>
 
-      {/* Bottom Status Area */}
-      <BottomStatusArea
-        ruleCount={globalConfig.rules.length}
-        violations={violations}
+      {/* Bottom Execution Panel */}
+      <ExecutionPanel
+        onExecute={handleExecute}
+        onReplay={handleReplay}
         isExecuting={isExecuting}
-        onExecute={executeWorkflow}
-        onExportMCP={handleExportMCP}
+        isReplaying={isReplaying}
+        lastResult={lastResult}
+        onOpenSlackModal={() => setShowSlackModal(true)}
       />
 
-      {/* Export Modal */}
-      <ExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        nodes={nodes}
-        edges={edges}
-        constitutionRules={globalConfig.rules.map((rule, index) => ({
-          id: `rule-${index}`,
-          name: rule,
-          condition: 'content',
-          action: 'block' as const,
-          description: rule,
-          enabled: true
-        }))}
+      {/* Slack Webhook Modal */}
+      <SlackWebhookModal
+        isOpen={showSlackModal}
+        onClose={() => setShowSlackModal(false)}
+        executionResult={lastResult}
       />
     </div>
   );

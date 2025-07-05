@@ -1,149 +1,174 @@
 
-import React from 'react';
-import { ExecutionStep } from '@/hooks/useExecutionFlow';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Play, RotateCcw, Download, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-interface ExecutionPanelProps {
-  executionSteps: ExecutionStep[];
-  isExecuting: boolean;
-  onClearLogs: () => void;
-  onStopExecution: () => void;
+interface ExecutionResult {
+  uuid: string;
+  violations: Array<{
+    nodeId: string;
+    ruleId: string;
+    description: string;
+    suggestion: string;
+  }>;
+  summary: string;
+  totalScore: number;
+  runTime: number;
+  outputUrl?: string;
 }
 
-const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ 
-  executionSteps, 
-  isExecuting, 
-  onClearLogs, 
-  onStopExecution 
+interface ExecutionPanelProps {
+  onExecute: () => Promise<ExecutionResult>;
+  onReplay: (uuid: string) => void;
+  isExecuting: boolean;
+  isReplaying: boolean;
+  lastResult?: ExecutionResult;
+  onOpenSlackModal: () => void;
+}
+
+const ExecutionPanel: React.FC<ExecutionPanelProps> = ({
+  onExecute,
+  onReplay,
+  isExecuting,
+  isReplaying,
+  lastResult,
+  onOpenSlackModal
 }) => {
-  const getStatusIcon = (status: ExecutionStep['status']) => {
-    switch (status) {
-      case 'pending': return '⏳';
-      case 'running': return '🔄';
-      case 'success': return '✅';
-      case 'failure': return '❌';
-      case 'violation': return '⚠️';
-      default: return '⚪';
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(lastResult || null);
+
+  const handleExecute = async () => {
+    try {
+      const result = await onExecute();
+      setExecutionResult(result);
+    } catch (error) {
+      console.error('Execution failed:', error);
     }
   };
 
-  const getStatusColor = (status: ExecutionStep['status']) => {
-    switch (status) {
-      case 'running': return 'text-blue-600 bg-blue-50';
-      case 'success': return 'text-green-600 bg-green-50';
-      case 'failure': return 'text-red-600 bg-red-50';
-      case 'violation': return 'text-orange-600 bg-orange-50';
-      default: return 'text-gray-600 bg-gray-50';
+  const handleReplay = () => {
+    if (executionResult?.uuid) {
+      onReplay(executionResult.uuid);
     }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Execution Monitor</h3>
-        <div className="flex items-center justify-between">
-          <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            isExecuting 
-              ? 'bg-blue-100 text-blue-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              isExecuting ? 'bg-blue-400 animate-pulse' : 'bg-gray-400'
-            }`} />
-            {isExecuting ? 'Running' : 'Idle'}
-          </div>
-          <div className="text-xs text-gray-500">
-            {executionSteps.length} steps
-          </div>
-        </div>
-      </div>
+    <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200/50 p-6">
+      <div className="flex items-center justify-between">
+        {/* Execution Controls */}
+        <div className="flex items-center space-x-3">
+          <Button
+            onClick={handleExecute}
+            disabled={isExecuting || isReplaying}
+            className="flex items-center space-x-2 px-6"
+          >
+            {isExecuting ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <span>Executing...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span>Run Workflow</span>
+              </>
+            )}
+          </Button>
 
-      {/* Execution Steps */}
-      <div className="flex-1 bg-gray-50 rounded-lg p-3 overflow-y-auto">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">Execution Timeline</h4>
-        {executionSteps.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <div className="text-4xl mb-2">🎬</div>
-            <p className="text-sm">No execution data</p>
-            <p className="text-xs">Click "Execute Workflow" to start</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {executionSteps.map((step, index) => (
-              <div key={step.id} className="bg-white rounded-lg p-3 border">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">{getStatusIcon(step.status)}</span>
-                    <span className="font-medium text-sm">Step {index + 1}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(step.status)}`}>
-                      {step.status}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {step.duration > 0 ? `${step.duration.toFixed(0)}ms` : 'Running...'}
-                  </div>
-                </div>
-                
-                <div className="text-sm text-gray-700 mb-2">
-                  <strong>Node:</strong> {step.nodeId}
-                </div>
-                
-                {step.input && (
-                  <div className="mb-2">
-                    <div className="text-xs font-medium text-gray-600 mb-1">Input:</div>
-                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(step.input, null, 2)}
-                    </pre>
-                  </div>
-                )}
-                
-                {step.output && Object.keys(step.output).length > 0 && (
-                  <div className="mb-2">
-                    <div className="text-xs font-medium text-gray-600 mb-1">Output:</div>
-                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(step.output, null, 2)}
-                    </pre>
-                  </div>
-                )}
-                
-                {step.errors && step.errors.length > 0 && (
-                  <div className="mb-2">
-                    <div className="text-xs font-medium text-red-600 mb-1">Errors:</div>
-                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                      {step.errors.map((error, i) => <div key={i}>{error}</div>)}
-                    </div>
-                  </div>
-                )}
-                
-                {step.violations && step.violations.length > 0 && (
-                  <div className="mb-2">
-                    <div className="text-xs font-medium text-orange-600 mb-1">Constitution Violations:</div>
-                    <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
-                      {step.violations.map((violation, i) => <div key={i}>{violation}</div>)}
-                    </div>
-                  </div>
-                )}
+          {executionResult && (
+            <Button
+              variant="outline"
+              onClick={handleReplay}
+              disabled={isExecuting || isReplaying}
+              className="flex items-center space-x-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>{isReplaying ? 'Replaying...' : 'Replay'}</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Results Summary */}
+        {executionResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center space-x-6"
+          >
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getScoreColor(executionResult.totalScore)}`}>
+                {executionResult.totalScore}
               </div>
-            ))}
-          </div>
+              <div className="text-xs text-gray-500">Total Score</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">
+                {executionResult.runTime}ms
+              </div>
+              <div className="text-xs text-gray-500">Run Time</div>
+            </div>
+            
+            <div className="text-center">
+              <div className={`text-lg font-semibold ${executionResult.violations.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {executionResult.violations.length}
+              </div>
+              <div className="text-xs text-gray-500">Violations</div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-2">
+              {executionResult.outputUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(executionResult.outputUrl, '_blank')}
+                  className="flex items-center space-x-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download</span>
+                </Button>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenSlackModal}
+                className="flex items-center space-x-1"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Share</span>
+              </Button>
+            </div>
+          </motion.div>
         )}
       </div>
 
-      {/* Control Buttons */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button 
-          onClick={onStopExecution}
-          disabled={!isExecuting}
-          className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Violations Detail */}
+      {executionResult && executionResult.violations.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200"
         >
-          Stop Execution
-        </button>
-        <button 
-          onClick={onClearLogs}
-          className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors"
-        >
-          Clear Logs
-        </button>
-      </div>
+          <h4 className="text-sm font-semibold text-red-800 mb-2">Constitutional Violations</h4>
+          <div className="space-y-2">
+            {executionResult.violations.map((violation, index) => (
+              <div key={index} className="text-sm">
+                <div className="font-medium text-red-700">Node: {violation.nodeId}</div>
+                <div className="text-red-600">{violation.description}</div>
+                <div className="text-red-500 italic">Suggestion: {violation.suggestion}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
