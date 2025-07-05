@@ -1,20 +1,6 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  ReactFlow,
-  addEdge,
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  Connection,
-  Edge,
-  Node,
-  ConnectionMode,
-  BackgroundVariant,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import React, { useState, useCallback } from 'react';
+import { useNodesState, useEdgesState, Node } from '@xyflow/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import NodeLibrary from './NodeLibrary';
@@ -23,7 +9,8 @@ import PromptInputArea from './PromptInputArea';
 import ExecutionPanel from './ExecutionPanel';
 import SlackWebhookModal from './SlackWebhookModal';
 import ReportCard from './ReportCard';
-import { nodeTypes } from './nodes';
+import WorkflowCanvas from './WorkflowCanvas';
+import NodeHighlighter from './NodeHighlighter';
 import { initialNodes, initialEdges } from './initialElements';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import { usePromptToBlocks } from '@/hooks/usePromptToBlocks';
@@ -46,55 +33,6 @@ const AgentBuilder = () => {
 
   const { isGenerating, generateFromPrompt } = usePromptToBlocks();
 
-  // Highlight current executing/replaying node
-  useEffect(() => {
-    setNodes(nds => nds.map(node => ({
-      ...node,
-      style: {
-        ...node.style,
-        border: currentStep === node.id 
-          ? (isReplaying ? '3px solid #f59e0b' : '3px solid #3b82f6')
-          : undefined,
-        boxShadow: currentStep === node.id 
-          ? (isReplaying ? '0 0 20px rgba(245, 158, 11, 0.5)' : '0 0 20px rgba(59, 130, 246, 0.5)')
-          : undefined
-      }
-    })));
-  }, [currentStep, isReplaying, setNodes]);
-
-  // Highlight nodes based on execution results
-  useEffect(() => {
-    setNodes(nds => nds.map(node => {
-      const nodeStep = executionSteps.find(step => step.nodeId === node.id);
-      
-      if (nodeStep) {
-        let borderColor = '#3b82f6';
-        let shadowColor = 'rgba(59, 130, 246, 0.4)';
-        
-        if (nodeStep.status === 'success') {
-          borderColor = '#10b981';
-          shadowColor = 'rgba(16, 185, 129, 0.4)';
-        } else if (nodeStep.status === 'error') {
-          borderColor = '#ef4444';
-          shadowColor = 'rgba(239, 68, 68, 0.4)';
-        } else if (nodeStep.status === 'violation') {
-          borderColor = '#f59e0b';
-          shadowColor = 'rgba(245, 158, 11, 0.4)';
-        }
-        
-        return {
-          ...node,
-          style: {
-            ...node.style,
-            border: currentStep === node.id ? node.style?.border : `2px solid ${borderColor}`,
-            boxShadow: currentStep === node.id ? node.style?.boxShadow : `0 0 10px ${shadowColor}`
-          }
-        };
-      }
-      return node;
-    }));
-  }, [executionSteps, currentStep, setNodes]);
-
   const handlePromptSubmit = async (prompt: string) => {
     try {
       const structure = await generateFromPrompt(prompt);
@@ -112,35 +50,6 @@ const AgentBuilder = () => {
   const handleReplay = async (uuid: string) => {
     await replayExecution(uuid);
   };
-
-  const onConnect = useCallback(
-    (params: Connection) => {
-      const targetNode = nodes.find(n => n.id === params.target);
-      const sourceNode = nodes.find(n => n.id === params.source);
-      
-      if (targetNode?.type === 'notifier') {
-        const validSources = ['end', 'router'];
-        if (sourceNode && validSources.includes(sourceNode.type)) {
-          const edge = addEdge({
-            ...params,
-            type: 'smoothstep',
-            style: { stroke: '#9b59b6', strokeWidth: 2 },
-            label: params.sourceHandle && params.sourceHandle !== 'default' ? params.sourceHandle : undefined
-          }, edges);
-          setEdges(edge);
-        }
-      } else {
-        const edge = addEdge({
-          ...params,
-          type: 'smoothstep',
-          style: { stroke: '#3498db', strokeWidth: 2 },
-          label: params.sourceHandle && params.sourceHandle !== 'default' ? params.sourceHandle : undefined
-        }, edges);
-        setEdges(edge);
-      }
-    },
-    [setEdges, edges, nodes]
-  );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
@@ -206,50 +115,23 @@ const AgentBuilder = () => {
 
         {/* Center Canvas */}
         <div className="flex-1 relative">
-          <ReactFlow
+          <WorkflowCanvas
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
             onNodeClick={onNodeClick}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
-            connectionMode={ConnectionMode.Loose}
-            fitView
-            className="bg-gradient-to-br from-slate-50 to-blue-50"
-            snapToGrid={true}
-            snapGrid={[20, 20]}
-          >
-            <Background 
-              variant={BackgroundVariant.Dots}
-              gap={20} 
-              size={1} 
-              color="#e2e8f0"
-            />
-            <Controls 
-              className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-lg"
-            />
-            <MiniMap 
-              nodeStrokeColor="#374151"
-              nodeColor={(node) => {
-                switch (node.type) {
-                  case 'start': return '#10b981';
-                  case 'agent': return '#3b82f6';
-                  case 'router': return '#f59e0b';
-                  case 'ruleChecker': return '#10b981';
-                  case 'end': return '#6b7280';
-                  case 'notifier': return '#8b5cf6';
-                  default: return '#f9fafb';
-                }
-              }}
-              nodeBorderRadius={8}
-              pannable
-              zoomable
-              className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-lg"
-            />
-          </ReactFlow>
+          />
+
+          <NodeHighlighter
+            nodes={nodes}
+            setNodes={setNodes}
+            currentStep={currentStep}
+            isReplaying={isReplaying}
+            executionSteps={executionSteps}
+          />
 
           {/* Generation Status Overlay */}
           <AnimatePresence>

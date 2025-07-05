@@ -39,23 +39,27 @@ const SlackWebhookModal: React.FC<SlackWebhookModalProps> = ({
 
     setIsSending(true);
     try {
-      // For now, simulate API call since backend endpoints aren't implemented
-      console.log('Sending to Slack:', {
-        webhookUrl,
-        channel,
-        message,
-        executionResult
+      const response = await fetch('/api/slack/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          webhookUrl,
+          channel,
+          message,
+          executionResult
+        }),
       });
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Show success message
-      alert('Message sent successfully to Slack!');
-      onClose();
+
+      if (response.ok) {
+        console.log('Message sent successfully');
+        onClose();
+      } else {
+        console.error('Failed to send message');
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message to Slack');
     } finally {
       setIsSending(false);
     }
