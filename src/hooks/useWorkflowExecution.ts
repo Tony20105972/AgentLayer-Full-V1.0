@@ -31,12 +31,17 @@ export const useWorkflowExecution = () => {
   const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([]);
   const [lastResult, setLastResult] = useState<ExecutionResult | null>(null);
 
-  const executeWorkflow = useCallback(async (nodes: Node[], edges: Edge[]): Promise<ExecutionResult> => {
+  const executeWorkflow = useCallback(async (
+    nodes: Node[], 
+    edges: Edge[], 
+    constitution: string = '', 
+    apiKeys: Record<string, string> = {}
+  ): Promise<ExecutionResult> => {
     setIsExecuting(true);
     setExecutionSteps([]);
     
     try {
-      // Simulate API call to /run-agent
+      // Mock API call to /api/run
       const workflowData = {
         nodes: nodes.map(node => ({
           id: node.id,
@@ -50,8 +55,12 @@ export const useWorkflowExecution = () => {
           target: edge.target,
           sourceHandle: edge.sourceHandle,
           targetHandle: edge.targetHandle
-        }))
+        })),
+        constitution,
+        apiKeys: Object.keys(apiKeys) // Don't send actual keys to frontend logs
       };
+
+      console.log('Executing workflow with data:', workflowData);
 
       // Simulate execution steps
       const orderedNodes = getExecutionOrder(nodes, edges);
@@ -70,8 +79,8 @@ export const useWorkflowExecution = () => {
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
         
-        // Simulate random violations and errors
-        const hasViolation = Math.random() > 0.85;
+        // Simulate constitution checking based on constitution length
+        const hasViolation = constitution.length > 100 ? Math.random() > 0.85 : Math.random() > 0.75;
         const hasError = Math.random() > 0.95;
         
         const finalStatus = hasError ? 'error' : hasViolation ? 'violation' : 'success';
@@ -123,7 +132,7 @@ export const useWorkflowExecution = () => {
     setIsReplaying(true);
     
     try {
-      // Simulate API call to /replay/{uuid}
+      // Mock API call to /api/replay/{uuid}
       const replayData = executionSteps;
       
       for (const step of replayData) {

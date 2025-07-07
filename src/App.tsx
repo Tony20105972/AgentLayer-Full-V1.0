@@ -3,10 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WagmiProvider } from 'wagmi';
 import { config } from './config/wagmi';
-import Index from "./pages/Index";
+import GlobalNavigation from './components/GlobalNavigation';
+import Builder from "./pages/Builder";
+import Marketplace from "./pages/Marketplace";
+import DAO from "./pages/DAO";
+import RunDetails from "./pages/RunDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,11 +22,17 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+            <GlobalNavigation />
+            <Routes>
+              <Route path="/" element={<Navigate to="/builder" replace />} />
+              <Route path="/builder" element={<Builder />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/dao" element={<DAO />} />
+              <Route path="/run/:uuid" element={<RunDetails />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

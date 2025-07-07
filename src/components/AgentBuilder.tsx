@@ -2,6 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNodesState, useEdgesState, Node } from '@xyflow/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 import NodeLibrary from './NodeLibrary';
 import PropertyPanel from './PropertyPanel';
@@ -11,15 +12,21 @@ import SlackWebhookModal from './SlackWebhookModal';
 import ReportCard from './ReportCard';
 import WorkflowCanvas from './WorkflowCanvas';
 import NodeHighlighter from './NodeHighlighter';
+import ConstitutionUploader from './ConstitutionUploader';
+import APIKeyModal from './APIKeyModal';
 import { initialNodes, initialEdges } from './initialElements';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import { usePromptToBlocks } from '@/hooks/usePromptToBlocks';
 
 const AgentBuilder = () => {
+  const navigate = useNavigate();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showSlackModal, setShowSlackModal] = useState(false);
+  const [showAPIKeyModal, setShowAPIKeyModal] = useState(false);
+  const [constitution, setConstitution] = useState('');
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   
   const {
     isExecuting,
@@ -44,7 +51,23 @@ const AgentBuilder = () => {
   };
 
   const handleExecute = async () => {
-    return await executeWorkflow(nodes, edges);
+    // Check if API keys are configured
+    const storedKeys = sessionStorage.getItem('agentlayer_api_keys');
+    if (!storedKeys) {
+      setShowAPIKeyModal(true);
+      return;
+    }
+
+    try {
+      const result = await executeWorkflow(nodes, edges, constitution, JSON.parse(storedKeys));
+      // Navigate to run details page
+      if (result.uuid) {
+        navigate(`/run/${result.uuid}`);
+      }
+      return result;
+    } catch (error) {
+      console.error('Execution failed:', error);
+    }
   };
 
   const handleReplay = async (uuid: string) => {
@@ -99,15 +122,17 @@ const AgentBuilder = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="flex h-[calc(100vh-4rem)]">
       {/* Top Prompt Input Area */}
-      <PromptInputArea 
-        onPromptSubmit={handlePromptSubmit}
-        isLoading={isGenerating}
-      />
+      <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <PromptInputArea 
+          onPromptSubmit={handlePromptSubmit}
+          isLoading={isGenerating}
+        />
+      </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 pt-20">
         {/* Left Panel - Node Library */}
         <div className="w-72 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-sm">
           <NodeLibrary />
@@ -172,34 +197,53 @@ const AgentBuilder = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right Panel - Properties */}
+        {/* Right Panel - Constitution & Properties */}
         <div className="w-80 bg-white/80 backdrop-blur-sm border-l border-gray-200/50 flex flex-col shadow-sm">
-          <PropertyPanel 
-            selectedNode={selectedNode} 
-            onUpdateNode={(nodeId, updates) => {
-              setNodes(nds => nds.map(node => 
-                node.id === nodeId ? { ...node, ...updates } : node
-              ));
-            }}
-          />
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 min-h-0">
+              <ConstitutionUploader
+                constitution={constitution}
+                onConstitutionChange={setConstitution}
+              />
+            </div>
+            <div className="border-t border-gray-200">
+              <PropertyPanel 
+                selectedNode={selectedNode} 
+                onUpdateNode={(nodeId, updates) => {
+                  setNodes(nds => nds.map(node => 
+                    node.id === nodeId ? { ...node, ...updates } : node
+                  ));
+                }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Bottom Execution Panel */}
-      <ExecutionPanel
-        onExecute={handleExecute}
-        onReplay={handleReplay}
-        isExecuting={isExecuting}
-        isReplaying={isReplaying}
-        lastResult={lastResult}
-        onOpenSlackModal={() => setShowSlackModal(true)}
-      />
+      <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200">
+        <ExecutionPanel
+          onExecute={handleExecute}
+          onReplay={handleReplay}
+          isExecuting={isExecuting}
+          isReplaying={isReplaying}
+          lastResult={lastResult}
+          onOpenSlackModal={() => setShowSlackModal(true)}
+          onOpenAPIKeys={() => setShowAPIKeyModal(true)}
+        />
+      </div>
 
-      {/* Slack Webhook Modal */}
+      {/* Modals */}
       <SlackWebhookModal
         isOpen={showSlackModal}
         onClose={() => setShowSlackModal(false)}
         executionResult={lastResult}
+      />
+
+      <APIKeyModal
+        isOpen={showAPIKeyModal}
+        onClose={() => setShowAPIKeyModal(false)}
+        onSave={setApiKeys}
       />
     </div>
   );
