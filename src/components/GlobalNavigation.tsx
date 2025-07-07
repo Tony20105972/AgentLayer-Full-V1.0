@@ -1,23 +1,32 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Bot, Store, Trophy, Wallet } from 'lucide-react';
 import WalletConnect from './WalletConnect';
 
 const GlobalNavigation: React.FC = () => {
+  const navigate = useNavigate();
+
   const navItems = [
     { to: '/builder', icon: Bot, label: 'Builder' },
     { to: '/marketplace', icon: Store, label: 'Marketplace' },
     { to: '/dao', icon: Trophy, label: 'DAO' },
   ];
 
+  const handleLogoClick = () => {
+    navigate('/');
+  };
+
   return (
     <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
+          {/* Logo - Main Navigation Hub */}
+          <div 
+            className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={handleLogoClick}
+          >
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">AL</span>
             </div>

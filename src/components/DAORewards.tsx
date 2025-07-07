@@ -1,50 +1,53 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, TrendingUp, Users, Coins } from 'lucide-react';
-
-interface LeaderboardEntry {
-  address: string;
-  reputation: number;
-  executions: number;
-  violations: number;
-  earnings: string;
-  rank: number;
-}
-
-const mockLeaderboard: LeaderboardEntry[] = [
-  {
-    address: '0x1234...5678',
-    reputation: 98,
-    executions: 234,
-    violations: 2,
-    earnings: '1.45',
-    rank: 1
-  },
-  {
-    address: '0x9876...4321',
-    reputation: 95,
-    executions: 189,
-    violations: 5,
-    earnings: '1.12',
-    rank: 2
-  },
-  {
-    address: '0x5555...7777',
-    reputation: 92,
-    executions: 156,
-    violations: 8,
-    earnings: '0.98',
-    rank: 3
-  }
-];
+import { Trophy, TrendingUp, Users, Coins, Loader2 } from 'lucide-react';
+import { apiService, DAOStats } from '@/services/api';
+import { useAccount } from 'wagmi';
 
 const DAORewards: React.FC = () => {
-  const treasuryBalance = '12.34';
-  const totalExecutions = 1247;
-  const averageReputation = 87;
+  const { address } = useAccount();
+  const [stats, setStats] = useState<DAOStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(false);
+
+  useEffect(() => {
+    const fetchDAOStats = async () => {
+      try {
+        setLoading(true);
+        const daoStats = await apiService.getDAOStats();
+        setStats(daoStats);
+      } catch (error) {
+        console.error('Failed to fetch DAO stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDAOStats();
+  }, []);
+
+  const handleClaimRewards = async () => {
+    if (!address) {
+      console.log('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setClaiming(true);
+      const result = await apiService.claimRewards(address);
+      console.log('Rewards claimed:', result);
+      // Handle successful claim (show success message, update UI, etc.)
+    } catch (error) {
+      console.error('Failed to claim rewards:', error);
+      // Handle claim failure
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   const getReputationColor = (reputation: number) => {
     if (reputation >= 95) return 'text-green-600';
@@ -65,12 +68,51 @@ const DAORewards: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading DAO stats...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-gray-400 mb-2">Failed to load DAO stats</div>
+        <div className="text-sm text-gray-500">Please try again later</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">DAO & Rewards</h2>
-        <p className="text-gray-600">Community treasury and reputation system</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">DAO & Rewards</h2>
+          <p className="text-gray-600">Community treasury and reputation system</p>
+        </div>
+        <Button
+          onClick={handleClaimRewards}
+          disabled={claiming || !address}
+          className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+        >
+          {claiming ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Claiming...
+            </>
+          ) : (
+            <>
+              <Trophy className="w-4 h-4 mr-2" />
+              Claim Rewards
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -82,7 +124,7 @@ const DAORewards: React.FC = () => {
                 <Coins className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">{treasuryBalance}</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.treasuryBalance}</div>
                 <div className="text-xs text-gray-500">ETH Treasury</div>
               </div>
             </div>
@@ -96,7 +138,7 @@ const DAORewards: React.FC = () => {
                 <TrendingUp className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">{totalExecutions}</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.totalExecutions}</div>
                 <div className="text-xs text-gray-500">Total Executions</div>
               </div>
             </div>
@@ -110,7 +152,7 @@ const DAORewards: React.FC = () => {
                 <Users className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">{averageReputation}</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.averageReputation}</div>
                 <div className="text-xs text-gray-500">Avg Reputation</div>
               </div>
             </div>
@@ -142,7 +184,7 @@ const DAORewards: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockLeaderboard.map((entry) => (
+            {stats.leaderboard.map((entry) => (
               <div key={entry.address} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="text-2xl">

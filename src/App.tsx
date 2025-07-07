@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WagmiProvider } from 'wagmi';
 import { config } from './config/wagmi';
 import GlobalNavigation from './components/GlobalNavigation';
+import Home from "./pages/Home";
 import Builder from "./pages/Builder";
 import Marketplace from "./pages/Marketplace";
 import DAO from "./pages/DAO";
@@ -25,7 +26,7 @@ const App = () => (
           <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
             <GlobalNavigation />
             <Routes>
-              <Route path="/" element={<Navigate to="/builder" replace />} />
+              <Route path="/" element={<Home />} />
               <Route path="/builder" element={<Builder />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/dao" element={<DAO />} />

@@ -1,87 +1,77 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Lock, Star, Download, Search, Filter, TrendingUp } from 'lucide-react';
+import { Lock, Star, Download, Search, Filter, TrendingUp, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-interface AgentTemplate {
-  id: string;
-  name: string;
-  description: string;
-  creator: string;
-  price: string;
-  rating: number;
-  downloads: number;
-  tags: string[];
-  isPremium: boolean;
-  previewNodes: number;
-  category: string;
-}
-
-const mockAgents: AgentTemplate[] = [
-  {
-    id: '1',
-    name: 'Content Summarizer Pro',
-    description: 'Advanced AI agent that summarizes articles, documents, and web content with high accuracy.',
-    creator: '0x1234...5678',
-    price: '0.01',
-    rating: 4.8,
-    downloads: 1240,
-    tags: ['Summarization', 'Content', 'AI'],
-    isPremium: true,
-    previewNodes: 4,
-    category: 'Content'
-  },
-  {
-    id: '2',
-    name: 'Language Translator',
-    description: 'Multi-language translation agent supporting 50+ languages with context awareness.',
-    creator: '0x9876...4321',
-    price: '0.005',
-    rating: 4.6,
-    downloads: 890,
-    tags: ['Translation', 'Language', 'Global'],
-    isPremium: false,
-    previewNodes: 3,
-    category: 'Language'
-  },
-  {
-    id: '3',
-    name: 'Code Review Assistant',
-    description: 'Automated code review agent that checks for bugs, security issues, and best practices.',
-    creator: '0x5555...7777',
-    price: '0.02',
-    rating: 4.9,
-    downloads: 567,
-    tags: ['Code', 'Review', 'Security'],
-    isPremium: true,
-    previewNodes: 6,
-    category: 'Developer'
-  }
-];
+import { apiService, AgentTemplate } from '@/services/api';
+import { useAccount } from 'wagmi';
 
 const AgentMarketplace: React.FC = () => {
+  const { address } = useAccount();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedAgent, setSelectedAgent] = useState<AgentTemplate | null>(null);
+  const [agents, setAgents] = useState<AgentTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
 
   const categories = ['All', 'Content', 'Language', 'Developer', 'Business', 'Creative'];
 
-  const filteredAgents = mockAgents.filter(agent => {
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        setLoading(true);
+        const templates = await apiService.getAgentTemplates();
+        setAgents(templates);
+      } catch (error) {
+        console.error('Failed to fetch agent templates:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgents();
+  }, []);
+
+  const filteredAgents = agents.filter(agent => {
     const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          agent.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || agent.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handlePurchase = (agent: AgentTemplate) => {
-    // In production, this would trigger the NFT purchase flow
-    console.log('Purchasing agent:', agent.name);
+  const handlePurchase = async (agent: AgentTemplate) => {
+    if (!address) {
+      console.log('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setPurchasing(agent.id);
+      const result = await apiService.purchaseTemplate(agent.id, address);
+      console.log('Purchase successful:', result);
+      // Handle successful purchase (show success message, update UI, etc.)
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      // Handle purchase failure
+    } finally {
+      setPurchasing(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading marketplace...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +84,7 @@ const AgentMarketplace: React.FC = () => {
         <div className="flex items-center space-x-2">
           <Badge variant="secondary" className="flex items-center space-x-1">
             <TrendingUp className="w-3 h-3" />
-            <span>{mockAgents.length} Templates</span>
+            <span>{agents.length} Templates</span>
           </Badge>
         </div>
       </div>
@@ -174,7 +164,7 @@ const AgentMarketplace: React.FC = () => {
                     {agent.previewNodes} nodes
                   </div>
                 </div>
-
+                
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-lg font-bold text-gray-900">
@@ -234,9 +224,17 @@ const AgentMarketplace: React.FC = () => {
 
                             <Button
                               onClick={() => handlePurchase(selectedAgent)}
+                              disabled={purchasing === selectedAgent.id || !address}
                               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                             >
-                              Purchase Agent Template
+                              {purchasing === selectedAgent.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Purchasing...
+                                </>
+                              ) : (
+                                'Purchase Agent Template'
+                              )}
                             </Button>
                           </div>
                         </>

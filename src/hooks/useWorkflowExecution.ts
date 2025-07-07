@@ -1,21 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
-
-interface ExecutionResult {
-  uuid: string;
-  violations: Array<{
-    nodeId: string;
-    ruleId: string;
-    description: string;
-    suggestion: string;
-  }>;
-  summary: string;
-  totalScore: number;
-  runTime: number;
-  outputUrl?: string;
-  timestamp: number;
-}
+import { apiService, ExecutionResult } from '@/services/api';
 
 interface ExecutionStep {
   nodeId: string;
@@ -41,7 +27,6 @@ export const useWorkflowExecution = () => {
     setExecutionSteps([]);
     
     try {
-      // Mock API call to /api/run
       const workflowData = {
         nodes: nodes.map(node => ({
           id: node.id,
@@ -55,14 +40,12 @@ export const useWorkflowExecution = () => {
           target: edge.target,
           sourceHandle: edge.sourceHandle,
           targetHandle: edge.targetHandle
-        })),
-        constitution,
-        apiKeys: Object.keys(apiKeys) // Don't send actual keys to frontend logs
+        }))
       };
 
-      console.log('Executing workflow with data:', workflowData);
+      console.log('Executing workflow with backend API...');
 
-      // Simulate execution steps
+      // Simulate execution steps for UI
       const orderedNodes = getExecutionOrder(nodes, edges);
       
       for (const nodeId of orderedNodes) {
@@ -79,11 +62,7 @@ export const useWorkflowExecution = () => {
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
         
-        // Simulate constitution checking based on constitution length
-        const hasViolation = constitution.length > 100 ? Math.random() > 0.85 : Math.random() > 0.75;
-        const hasError = Math.random() > 0.95;
-        
-        const finalStatus = hasError ? 'error' : hasViolation ? 'violation' : 'success';
+        const finalStatus = Math.random() > 0.9 ? 'violation' : 'success';
         
         setExecutionSteps(prev => 
           prev.map(s => 
@@ -92,30 +71,11 @@ export const useWorkflowExecution = () => {
               : s
           )
         );
-        
-        if (hasError) break;
       }
 
-      // Generate mock result
-      const violations = executionSteps
-        .filter(step => step.status === 'violation')
-        .map(step => ({
-          nodeId: step.nodeId,
-          ruleId: `RULE_${Math.floor(Math.random() * 100)}`,
-          description: `Constitutional violation detected in node ${step.nodeId}`,
-          suggestion: 'Consider reviewing the prompt and ensuring compliance with ethical guidelines'
-        }));
-
-      const result: ExecutionResult = {
-        uuid: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        violations,
-        summary: `Workflow executed successfully with ${nodes.length} nodes. ${violations.length} violations detected.`,
-        totalScore: Math.max(0, 100 - violations.length * 15 - Math.floor(Math.random() * 10)),
-        runTime: 1200 + Math.floor(Math.random() * 2000),
-        outputUrl: violations.length === 0 ? `https://example.com/reports/${Date.now()}.html` : undefined,
-        timestamp: Date.now()
-      };
-
+      // Call backend API
+      const result = await apiService.executeAgent(workflowData, constitution, apiKeys);
+      
       setLastResult(result);
       return result;
 
@@ -126,16 +86,17 @@ export const useWorkflowExecution = () => {
       setIsExecuting(false);
       setCurrentStep(null);
     }
-  }, [executionSteps]);
+  }, []);
 
   const replayExecution = useCallback(async (uuid: string) => {
     setIsReplaying(true);
     
     try {
-      // Mock API call to /api/replay/{uuid}
-      const replayData = executionSteps;
+      // Fetch execution details from backend
+      const executionData = await apiService.getExecutionDetails(uuid);
       
-      for (const step of replayData) {
+      // Simulate replay for UI
+      for (const step of executionSteps) {
         setCurrentStep(step.nodeId);
         await new Promise(resolve => setTimeout(resolve, 500));
       }
