@@ -1,29 +1,60 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import WalletConnect from './WalletConnect';
+import AgentMarketplace from './AgentMarketplace';
+import DAORewards from './DAORewards';
+import { Store, Trophy } from 'lucide-react';
 
 const WorkflowHeader: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('builder');
+
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">AL</span>
+    <div className="bg-white border-b border-gray-200">
+      <header className="px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">AL</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">AgentLayer</h1>
+            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              Web3 AI Agent Platform
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">AgentLayer</h1>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-            AI Agent Builder Platform
-          </span>
+          <WalletConnect />
         </div>
-        <div className="flex items-center space-x-4">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Save Workflow
-          </button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-            Load Template
-          </button>
-        </div>
+      </header>
+
+      <div className="px-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="builder">Builder</TabsTrigger>
+            <TabsTrigger value="marketplace" className="flex items-center space-x-1">
+              <Store className="w-4 h-4" />
+              <span>Marketplace</span>
+            </TabsTrigger>
+            <TabsTrigger value="dao" className="flex items-center space-x-1">
+              <Trophy className="w-4 h-4" />
+              <span>DAO</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="builder" className="mt-0">
+            {/* Builder content will be rendered by AgentBuilder component */}
+          </TabsContent>
+          
+          <TabsContent value="marketplace" className="mt-6">
+            <AgentMarketplace />
+          </TabsContent>
+          
+          <TabsContent value="dao" className="mt-6">
+            <DAORewards />
+          </TabsContent>
+        </Tabs>
       </div>
-    </header>
+    </div>
   );
 };
 
