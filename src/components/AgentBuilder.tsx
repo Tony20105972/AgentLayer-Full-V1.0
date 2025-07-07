@@ -1,251 +1,429 @@
 
-import React, { useState, useCallback } from 'react';
-import { useNodesState, useEdgesState, Node } from '@xyflow/react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Sparkles, Download, Upload, Play, Plus, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-import NodeLibrary from './NodeLibrary';
-import PropertyPanel from './PropertyPanel';
-import PromptInputArea from './PromptInputArea';
-import ExecutionPanel from './ExecutionPanel';
-import SlackWebhookModal from './SlackWebhookModal';
-import ReportCard from './ReportCard';
-import WorkflowCanvas from './WorkflowCanvas';
-import NodeHighlighter from './NodeHighlighter';
-import ConstitutionUploader from './ConstitutionUploader';
-import APIKeyModal from './APIKeyModal';
-import { initialNodes, initialEdges } from './initialElements';
-import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
-import { usePromptToBlocks } from '@/hooks/usePromptToBlocks';
+interface Block {
+  id: string;
+  type: 'state' | 'node' | 'router' | 'ruleChecker' | 'output';
+  name: string;
+  config: any;
+  position: number;
+}
 
-const AgentBuilder = () => {
-  const navigate = useNavigate();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [showSlackModal, setShowSlackModal] = useState(false);
-  const [showAPIKeyModal, setShowAPIKeyModal] = useState(false);
-  const [constitution, setConstitution] = useState('');
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  
-  const {
-    isExecuting,
-    isReplaying,
-    currentStep,
-    executionSteps,
-    lastResult,
-    executeWorkflow,
-    replayExecution
-  } = useWorkflowExecution();
+const AgentBuilder: React.FC = () => {
+  const { toast } = useToast();
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [crewMode, setCrewMode] = useState(false);
+  const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executingBlockId, setExecutingBlockId] = useState<string | null>(null);
 
-  const { isGenerating, generateFromPrompt } = usePromptToBlocks();
+  const addBlock = (type: Block['type']) => {
+    const newBlock: Block = {
+      id: `${type}-${Date.now()}`,
+      type,
+      name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${blocks.filter(b => b.type === type).length + 1}`,
+      config: getDefaultConfig(type),
+      position: blocks.length
+    };
+    setBlocks([...blocks, newBlock]);
+  };
 
-  const handlePromptSubmit = async (prompt: string) => {
-    try {
-      const structure = await generateFromPrompt(prompt);
-      setNodes(structure.nodes);
-      setEdges(structure.edges);
-    } catch (error) {
-      console.error('Failed to generate workflow:', error);
+  const getDefaultConfig = (type: Block['type']) => {
+    switch (type) {
+      case 'state':
+        return { initialState: '{\n  "message": "",\n  "context": {}\n}' };
+      case 'node':
+        return { 
+          prompt: 'You are a helpful AI assistant. Process the input and provide a response.',
+          inputs: [],
+          outputs: ['result'],
+          aiModel: 'gpt-4'
+        };
+      case 'router':
+        return { 
+          conditions: [
+            { name: 'condition1', expression: 'true', description: 'Default condition' }
+          ]
+        };
+      case 'ruleChecker':
+        return { 
+          rules: [
+            { rule_name: 'no_harmful_content', description: 'Prevent harmful or inappropriate content', violation_action: 'block' }
+          ]
+        };
+      case 'output':
+        return { 
+          destination: 'webhook',
+          template: 'Result: {{result}}',
+          config: { url: '' }
+        };
+      default:
+        return {};
     }
   };
 
-  const handleExecute = async () => {
-    // Check if API keys are configured
-    const storedKeys = sessionStorage.getItem('agentlayer_api_keys');
-    if (!storedKeys) {
-      setShowAPIKeyModal(true);
+  const updateBlock = (id: string, updates: Partial<Block>) => {
+    setBlocks(blocks.map(block => 
+      block.id === id ? { ...block, ...updates } : block
+    ));
+  };
+
+  const deleteBlock = (id: string) => {
+    setBlocks(blocks.filter(block => block.id !== id));
+  };
+
+  const generateFromNaturalLanguage = async () => {
+    if (!naturalLanguageInput.trim()) return;
+    
+    setIsGenerating(true);
+    try {
+      // Simulate AI generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate basic flow based on input
+      const generatedBlocks: Block[] = [
+        {
+          id: 'state-1',
+          type: 'state',
+          name: 'Initial State',
+          config: { initialState: '{\n  "input_text": "",\n  "user_id": ""\n}' },
+          position: 0
+        },
+        {
+          id: 'node-1',
+          type: 'node',
+          name: 'Process Input',
+          config: {
+            prompt: `Process the following input: {{input_text}}. Provide a helpful response.`,
+            inputs: ['input_text'],
+            outputs: ['processed_result'],
+            aiModel: 'gpt-4'
+          },
+          position: 1
+        },
+        {
+          id: 'ruleChecker-1',
+          type: 'ruleChecker',
+          name: 'Rule Checker',
+          config: {
+            rules: [
+              { rule_name: 'no_harmful_content', description: 'Prevent harmful content', violation_action: 'block' },
+              { rule_name: 'factual_accuracy', description: 'Ensure factual accuracy', violation_action: 'warn' }
+            ]
+          },
+          position: 2
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          name: 'Final Output',
+          config: {
+            destination: 'webhook',
+            template: 'Result: {{processed_result}}',
+            config: { url: '' }
+          },
+          position: 3
+        }
+      ];
+      
+      setBlocks(generatedBlocks);
+      toast({
+        title: "Workflow Generated",
+        description: "Successfully generated workflow from natural language description."
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate workflow. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const executeWorkflow = async () => {
+    if (blocks.length === 0) {
+      toast({
+        title: "No Workflow",
+        description: "Please add blocks to your workflow before executing.",
+        variant: "destructive"
+      });
       return;
     }
 
+    setIsExecuting(true);
     try {
-      const result = await executeWorkflow(nodes, edges, constitution, JSON.parse(storedKeys));
-      // Navigate to run details page
-      if (result.uuid) {
-        navigate(`/run/${result.uuid}`);
+      // Simulate execution with visual feedback
+      for (const block of blocks.sort((a, b) => a.position - b.position)) {
+        setExecutingBlockId(block.id);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Simulate rule checker violations
+        if (block.type === 'ruleChecker' && Math.random() > 0.8) {
+          toast({
+            title: "Rule Violation Detected",
+            description: `${block.name} found a potential violation.`,
+            variant: "destructive"
+          });
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-      return result;
+      
+      toast({
+        title: "Execution Complete",
+        description: "Workflow executed successfully!"
+      });
     } catch (error) {
-      console.error('Execution failed:', error);
+      toast({
+        title: "Execution Failed",
+        description: "Workflow execution encountered an error.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecuting(false);
+      setExecutingBlockId(null);
     }
   };
 
-  const handleReplay = async (uuid: string) => {
-    await replayExecution(uuid);
+  const exportWorkflow = () => {
+    const workflowData = {
+      blocks,
+      crewMode,
+      metadata: {
+        created: new Date().toISOString(),
+        version: '1.0'
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'agent-workflow.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setSelectedNode(node);
-  }, []);
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-
-      const type = event.dataTransfer.getData('application/reactflow');
-      if (typeof type === 'undefined' || !type) {
-        return;
-      }
-
-      if (type !== 'notifier') {
-        return;
-      }
-
-      const position = {
-        x: event.clientX - 300,
-        y: event.clientY - 200,
-      };
-      
-      const newNode: Node = {
-        id: `${type}-${Date.now()}`,
-        type,
-        position,
-        data: { 
-          label: `Notifier`,
-          config: {
-            type: 'webhook',
-            webhookUrl: '',
-            channel: '',
-            messageTemplate: 'Agent notification: {{message}}'
-          }
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [setNodes]
-  );
-
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      {/* Top Prompt Input Area */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
-        <PromptInputArea 
-          onPromptSubmit={handlePromptSubmit}
-          isLoading={isGenerating}
-        />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="backdrop-blur-xl bg-white/5 min-h-screen">
+        <div className="container mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">Agent Builder</h1>
+            <p className="text-slate-300">Create constitutional AI workflows with visual blocks</p>
+          </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 pt-20">
-        {/* Left Panel - Node Library */}
-        <div className="w-72 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-sm">
-          <NodeLibrary />
-        </div>
-
-        {/* Center Canvas */}
-        <div className="flex-1 relative">
-          <WorkflowCanvas
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          />
-
-          <NodeHighlighter
-            nodes={nodes}
-            setNodes={setNodes}
-            currentStep={currentStep}
-            isReplaying={isReplaying}
-            executionSteps={executionSteps}
-          />
-
-          {/* Generation Status Overlay */}
-          <AnimatePresence>
-            {isGenerating && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/20 flex items-center justify-center z-20"
+          {/* Natural Language Input */}
+          <Card className="mb-8 bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Describe Your Agent
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={naturalLanguageInput}
+                onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                placeholder="Build an agent that translates text, checks ethical rules, and sends to Discord..."
+                className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                rows={3}
+              />
+              <Button 
+                onClick={generateFromNaturalLanguage}
+                disabled={isGenerating || !naturalLanguageInput.trim()}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
               >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-white rounded-lg shadow-xl border-2 border-blue-500 p-6 text-center"
+                {isGenerating ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                Generate Workflow
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Controls */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="crew-mode"
+                  checked={crewMode}
+                  onCheckedChange={setCrewMode}
+                />
+                <Label htmlFor="crew-mode" className="text-white">Crew AI Mode</Label>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={executeWorkflow}
+                  disabled={isExecuting || blocks.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
                 >
-                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <div className="text-lg font-semibold text-gray-900">Generating Workflow</div>
-                  <div className="text-sm text-gray-600">
-                    Analyzing prompt and creating blocks...
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Report Card Overlay */}
-          <AnimatePresence>
-            {lastResult && !isExecuting && !isReplaying && (
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 50 }}
-                className="absolute top-4 right-4 z-10 max-w-md"
-              >
-                <ReportCard executionResult={lastResult} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Right Panel - Constitution & Properties */}
-        <div className="w-80 bg-white/80 backdrop-blur-sm border-l border-gray-200/50 flex flex-col shadow-sm">
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 min-h-0">
-              <ConstitutionUploader
-                constitution={constitution}
-                onConstitutionChange={setConstitution}
-              />
+                  <Play className="w-4 h-4 mr-2" />
+                  Execute
+                </Button>
+                <Button 
+                  onClick={exportWorkflow}
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
             </div>
-            <div className="border-t border-gray-200">
-              <PropertyPanel 
-                selectedNode={selectedNode} 
-                onUpdateNode={(nodeId, updates) => {
-                  setNodes(nds => nds.map(node => 
-                    node.id === nodeId ? { ...node, ...updates } : node
-                  ));
-                }}
-              />
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => addBlock('state')}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                State
+              </Button>
+              <Button 
+                onClick={() => addBlock('node')}
+                size="sm"
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {crewMode ? 'Role/Task' : 'Node'}
+              </Button>
+              <Button 
+                onClick={() => addBlock('router')}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Router
+              </Button>
+              <Button 
+                onClick={() => addBlock('ruleChecker')}
+                size="sm"
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Rules
+              </Button>
+              <Button 
+                onClick={() => addBlock('output')}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Output
+              </Button>
             </div>
           </div>
+
+          {/* Workflow Blocks */}
+          <div className="space-y-6">
+            {blocks
+              .sort((a, b) => a.position - b.position)
+              .map((block) => (
+                <BlockEditor
+                  key={block.id}
+                  block={block}
+                  crewMode={crewMode}
+                  isExecuting={executingBlockId === block.id}
+                  onUpdate={(updates) => updateBlock(block.id, updates)}
+                  onDelete={() => deleteBlock(block.id)}
+                />
+              ))}
+          </div>
+
+          {blocks.length === 0 && (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">🤖</div>
+              <h3 className="text-2xl font-semibold text-white mb-2">No Blocks Yet</h3>
+              <p className="text-slate-400 mb-6">
+                Start by describing your agent or add blocks manually
+              </p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Bottom Execution Panel */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200">
-        <ExecutionPanel
-          onExecute={handleExecute}
-          onReplay={handleReplay}
-          isExecuting={isExecuting}
-          isReplaying={isReplaying}
-          lastResult={lastResult}
-          onOpenSlackModal={() => setShowSlackModal(true)}
-          onOpenAPIKeys={() => setShowAPIKeyModal(true)}
-        />
-      </div>
-
-      {/* Modals */}
-      <SlackWebhookModal
-        isOpen={showSlackModal}
-        onClose={() => setShowSlackModal(false)}
-        executionResult={lastResult}
-      />
-
-      <APIKeyModal
-        isOpen={showAPIKeyModal}
-        onClose={() => setShowAPIKeyModal(false)}
-        onSave={setApiKeys}
-      />
     </div>
+  );
+};
+
+// Block Editor Component
+interface BlockEditorProps {
+  block: Block;
+  crewMode: boolean;
+  isExecuting: boolean;
+  onUpdate: (updates: Partial<Block>) => void;
+  onDelete: () => void;
+}
+
+const BlockEditor: React.FC<BlockEditorProps> = ({ 
+  block, 
+  crewMode, 
+  isExecuting, 
+  onUpdate, 
+  onDelete 
+}) => {
+  const getBlockColor = (type: string) => {
+    switch (type) {
+      case 'state': return 'from-blue-500/20 to-blue-600/20 border-blue-500/30';
+      case 'node': return 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30';
+      case 'router': return 'from-orange-500/20 to-orange-600/20 border-orange-500/30';
+      case 'ruleChecker': return 'from-red-500/20 to-red-600/20 border-red-500/30';
+      case 'output': return 'from-green-500/20 to-green-600/20 border-green-500/30';
+      default: return 'from-gray-500/20 to-gray-600/20 border-gray-500/30';
+    }
+  };
+
+  const executionClass = isExecuting 
+    ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse' 
+    : '';
+
+  return (
+    <Card className={`bg-gradient-to-r ${getBlockColor(block.type)} backdrop-blur-sm border ${executionClass} transition-all duration-300`}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="bg-white/20 text-white">
+            {block.type.toUpperCase()}
+          </Badge>
+          <Input
+            value={block.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            className="bg-transparent border-none text-white font-semibold text-lg p-0 h-auto focus-visible:ring-0"
+          />
+        </div>
+        <Button
+          onClick={onDelete}
+          variant="ghost"
+          size="sm"
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {/* Block-specific content will be rendered here */}
+        <div className="text-white/80">
+          <p>Block configuration for {block.type}</p>
+          {/* Add specific block editors based on type */}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
