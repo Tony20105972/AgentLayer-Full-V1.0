@@ -12,7 +12,7 @@ export interface NodeConfig {
   outputs?: string[];
 }
 
-export interface NodeData {
+export interface NodeData extends Record<string, unknown> {
   label: string;
   config?: NodeConfig;
   isExecuting?: boolean;
