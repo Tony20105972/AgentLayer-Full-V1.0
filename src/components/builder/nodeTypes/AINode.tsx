@@ -5,10 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Settings, RotateCcw } from 'lucide-react';
+import { NodeData } from '@/types/flow';
 
 const AINode: React.FC<NodeProps> = ({ data, selected }) => {
+  const nodeData = data as NodeData;
+  
   return (
-    <Card className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} ${data.isExecuting ? 'ring-2 ring-green-500 animate-pulse' : ''}`}>
+    <Card className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} ${nodeData.isExecuting ? 'ring-2 ring-green-500 animate-pulse' : ''}`}>
       <CardContent className="p-4">
         <Handle
           type="target"
@@ -21,9 +24,9 @@ const AINode: React.FC<NodeProps> = ({ data, selected }) => {
           <div className="text-2xl">🤖</div>
         </div>
         
-        <div className="font-semibold text-gray-900 mb-1">{data.label}</div>
+        <div className="font-semibold text-gray-900 mb-1">{String(nodeData.label)}</div>
         <div className="text-xs text-gray-500 mb-3">
-          Model: {data.config?.model || 'gpt-4'}
+          Model: {nodeData.config?.model || 'gpt-4'}
         </div>
         
         <div className="flex space-x-1">

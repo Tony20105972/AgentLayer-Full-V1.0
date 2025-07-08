@@ -24,7 +24,7 @@ const ExecutionTracker: React.FC<ExecutionTrackerProps> = ({
         <div className="flex items-center space-x-3">
           <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
           <span className="font-medium text-blue-900">
-            Executing: {currentNode?.data.label || 'Unknown Node'}
+            Executing: {String(currentNode?.data?.label || 'Unknown Node')}
           </span>
           <Badge variant="secondary">{currentNode?.type}</Badge>
         </div>

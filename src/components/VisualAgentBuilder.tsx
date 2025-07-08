@@ -22,6 +22,7 @@ import PropertyPanel from './builder/PropertyPanel';
 import ExecutionTracker from './builder/ExecutionTracker';
 import { nodeTypes } from './builder/nodeTypes';
 import { useFlowStore } from '@/stores/flowStore';
+import { NodeData, NodeConfig } from '@/types/flow';
 
 const VisualAgentBuilder: React.FC = () => {
   return (
@@ -70,7 +71,7 @@ const BuilderContent: React.FC = () => {
         return;
       }
 
-      const position = reactFlowInstance.project({
+      const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
       });
@@ -87,7 +88,7 @@ const BuilderContent: React.FC = () => {
     [reactFlowInstance, setNodes]
   );
 
-  const getDefaultNodeData = (type: string) => {
+  const getDefaultNodeData = (type: string): NodeData => {
     switch (type) {
       case 'state':
         return { 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Node } from '@xyflow/react';
 import { Settings, FileText, Plus, Trash2 } from 'lucide-react';
+import { NodeData, NodeConfig } from '@/types/flow';
 
 interface PropertyPanelProps {
   selectedNode: Node | null;
@@ -152,10 +153,13 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
   node,
   onUpdate
 }) => {
+  const nodeData = node.data as NodeData;
+  const config = nodeData.config || {} as NodeConfig;
+
   const handleConfigUpdate = (field: string, value: any) => {
     onUpdate({
       config: {
-        ...node.data.config,
+        ...config,
         [field]: value
       }
     });
@@ -164,14 +168,14 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-900 mb-2">{node.data.label} Configuration</h3>
+        <h3 className="font-semibold text-gray-900 mb-2">{String(nodeData.label)} Configuration</h3>
         <Badge variant="secondary">{node.type}</Badge>
       </div>
 
       <div>
         <label className="text-sm font-medium">Node Name</label>
         <Input
-          value={node.data.label}
+          value={String(nodeData.label)}
           onChange={(e) => onUpdate({ label: e.target.value })}
         />
       </div>
@@ -181,7 +185,7 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           <div>
             <label className="text-sm font-medium">Prompt</label>
             <Textarea
-              value={node.data.config?.prompt || ''}
+              value={config.prompt || ''}
               onChange={(e) => handleConfigUpdate('prompt', e.target.value)}
               rows={4}
             />
@@ -189,7 +193,7 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           <div>
             <label className="text-sm font-medium">Model</label>
             <select
-              value={node.data.config?.model || 'gpt-4'}
+              value={config.model || 'gpt-4'}
               onChange={(e) => handleConfigUpdate('model', e.target.value)}
               className="w-full p-2 border rounded"
             >
@@ -205,7 +209,7 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
         <div>
           <label className="text-sm font-medium">Initial State (JSON)</label>
           <Textarea
-            value={node.data.config?.initialState || '{}'}
+            value={config.initialState || '{}'}
             onChange={(e) => handleConfigUpdate('initialState', e.target.value)}
             rows={6}
             className="font-mono text-sm"
@@ -218,7 +222,7 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           <div>
             <label className="text-sm font-medium">Destination</label>
             <select
-              value={node.data.config?.destination || 'webhook'}
+              value={config.destination || 'webhook'}
               onChange={(e) => handleConfigUpdate('destination', e.target.value)}
               className="w-full p-2 border rounded"
             >
@@ -231,7 +235,7 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           <div>
             <label className="text-sm font-medium">Template</label>
             <Textarea
-              value={node.data.config?.template || ''}
+              value={config.template || ''}
               onChange={(e) => handleConfigUpdate('template', e.target.value)}
               placeholder="Result: {{result}}"
               rows={3}
