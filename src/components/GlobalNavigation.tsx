@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bot, Store, Trophy, Wallet } from 'lucide-react';
+import { Bot, Store, Trophy, BarChart3 } from 'lucide-react';
 import WalletConnect from './WalletConnect';
 
 const GlobalNavigation: React.FC = () => {
@@ -10,6 +10,7 @@ const GlobalNavigation: React.FC = () => {
 
   const navItems = [
     { to: '/builder', icon: Bot, label: 'Builder' },
+    { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
     { to: '/marketplace', icon: Store, label: 'Marketplace' },
     { to: '/dao', icon: Trophy, label: 'DAO' },
   ];

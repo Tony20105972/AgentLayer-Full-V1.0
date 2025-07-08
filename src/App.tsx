@@ -9,6 +9,7 @@ import { config } from './config/wagmi';
 import GlobalNavigation from './components/GlobalNavigation';
 import Home from "./pages/Home";
 import Builder from "./pages/Builder";
+import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import DAO from "./pages/DAO";
 import RunDetails from "./pages/RunDetails";
@@ -28,6 +29,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/builder" element={<Builder />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/dao" element={<DAO />} />
               <Route path="/run/:uuid" element={<RunDetails />} />

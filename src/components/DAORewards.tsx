@@ -1,5 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DAOGovernance from './DAOGovernance';
+
+// Legacy DAORewards component - keeping for backwards compatibility
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +13,7 @@ import { Trophy, TrendingUp, Users, Coins, Loader2 } from 'lucide-react';
 import { apiService, DAOStats } from '@/services/api';
 import { useAccount } from 'wagmi';
 
-const DAORewards: React.FC = () => {
+const RewardsSection: React.FC = () => {
   const { address } = useAccount();
   const [stats, setStats] = useState<DAOStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,10 +45,8 @@ const DAORewards: React.FC = () => {
       setClaiming(true);
       const result = await apiService.claimRewards(address);
       console.log('Rewards claimed:', result);
-      // Handle successful claim (show success message, update UI, etc.)
     } catch (error) {
       console.error('Failed to claim rewards:', error);
-      // Handle claim failure
     } finally {
       setClaiming(false);
     }
@@ -57,14 +60,10 @@ const DAORewards: React.FC = () => {
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1:
-        return '🥇';
-      case 2:
-        return '🥈';
-      case 3:
-        return '🥉';
-      default:
-        return `#${rank}`;
+      case 1: return '🥇';
+      case 2: return '🥈';
+      case 3: return '🥉';
+      default: return `#${rank}`;
     }
   };
 
@@ -92,10 +91,6 @@ const DAORewards: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">DAO & Rewards</h2>
-          <p className="text-gray-600">Community treasury and reputation system</p>
-        </div>
         <Button
           onClick={handleClaimRewards}
           disabled={claiming || !address}
@@ -262,6 +257,33 @@ const DAORewards: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+const DAORewards: React.FC = () => {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900">DAO & Governance</h2>
+        <p className="text-gray-600">Community treasury, reputation system, and constitutional governance</p>
+      </div>
+
+      <Tabs defaultValue="governance" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="governance">Governance</TabsTrigger>
+          <TabsTrigger value="rewards">Rewards & Leaderboard</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="governance">
+          <DAOGovernance />
+        </TabsContent>
+
+        <TabsContent value="rewards">
+          <RewardsSection />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
