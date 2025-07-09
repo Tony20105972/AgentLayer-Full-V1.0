@@ -1,94 +1,158 @@
 
 import React from 'react';
-import { Card } from '@/components/ui/card';
 
-const NodeLibrary: React.FC = () => {
+const NodeLibrary = () => {
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const nodeTypes = [
+  const langGraphNodes = [
     { 
       type: 'state', 
       icon: '🗂️', 
-      name: 'State', 
-      color: 'from-blue-500 to-blue-600',
-      description: 'Initial state configuration'
+      name: 'State Manager', 
+      color: 'from-blue-500 to-blue-600', 
+      description: 'Initialize shared state',
+      required: true
     },
     { 
       type: 'llm', 
       icon: '🧠', 
-      name: 'LLM Node', 
-      color: 'from-purple-500 to-purple-600',
-      description: 'Large Language Model processing'
-    },
-    { 
-      type: 'tool', 
-      icon: '🔧', 
-      name: 'Tool Node', 
-      color: 'from-orange-500 to-orange-600',
-      description: 'External tool integration'
+      name: 'AI Agent Node', 
+      color: 'from-purple-500 to-purple-600', 
+      description: 'LLM processing unit',
+      required: false
     },
     { 
       type: 'router', 
       icon: '🔀', 
-      name: 'Router', 
-      color: 'from-amber-500 to-amber-600',
-      description: 'Conditional flow routing'
+      name: 'Decision Router', 
+      color: 'from-orange-500 to-orange-600', 
+      description: 'Conditional branching',
+      required: false
     },
     { 
       type: 'ruleChecker', 
-      icon: '⚖️', 
-      name: 'Rule Checker', 
-      color: 'from-green-500 to-green-600',
-      description: 'Constitution enforcement'
+      icon: '🛡️', 
+      name: 'Constitution Checker', 
+      color: 'from-red-500 to-red-600', 
+      description: 'Rule enforcement',
+      required: true
     },
     { 
       type: 'output', 
       icon: '📤', 
-      name: 'Output', 
-      color: 'from-indigo-500 to-indigo-600',
-      description: 'Final output destination'
+      name: 'Output Handler', 
+      color: 'from-green-500 to-green-600', 
+      description: 'External channels',
+      required: true
     }
   ];
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+    <div className="w-80 bg-white border-r border-gray-200 p-6 h-full overflow-y-auto">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Node Library</h2>
-        <p className="text-sm text-gray-600">Drag blocks to canvas to build your agent flow</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">LangGraph Nodes</h3>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Build constitutional AI workflows with visual blocks
+        </p>
       </div>
 
-      <div className="space-y-3">
-        {nodeTypes.map((node) => (
-          <Card
-            key={node.type}
-            className="p-4 cursor-grab hover:shadow-md transition-all duration-200 border-2 border-dashed border-gray-200 hover:border-gray-300"
-            draggable
-            onDragStart={(event) => onDragStart(event, node.type)}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`w-10 h-10 bg-gradient-to-r ${node.color} rounded-lg flex items-center justify-center text-lg shadow-sm`}>
-                {node.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-gray-900">{node.name}</h3>
-                <p className="text-xs text-gray-500 truncate">{node.description}</p>
+      {/* LangGraph Flow Structure */}
+      <div className="mb-8">
+        <h4 className="text-sm font-semibold text-gray-800 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+          LangGraph Flow Structure
+        </h4>
+        <div className="space-y-3">
+          {langGraphNodes.map((node, index) => (
+            <div
+              key={node.type}
+              draggable
+              onDragStart={(event) => onDragStart(event, node.type)}
+              className={`p-4 border-2 border-dashed rounded-lg cursor-grab hover:bg-gray-50 transition-all group bg-white shadow-sm ${
+                node.required ? 'border-gray-300' : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 bg-gradient-to-r ${node.color} rounded-lg flex items-center justify-center text-lg shadow-sm`}>
+                  {node.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 flex items-center">
+                    {node.name}
+                    {node.required && (
+                      <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                        Required
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">{node.description}</div>
+                </div>
+                <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </Card>
-        ))}
+          ))}
+        </div>
+        
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="text-xs text-blue-700 font-medium mb-1">
+            💡 LangGraph Best Practices
+          </div>
+          <ul className="text-xs text-blue-600 space-y-1">
+            <li>• State → Node(s) → Router → RuleChecker → Output</li>
+            <li>• Connect nodes with edges left-to-right</li>
+            <li>• Always include RuleChecker for constitution</li>
+            <li>• Use Router for complex conditional logic</li>
+          </ul>
+        </div>
       </div>
 
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">Flow Guidelines</h4>
-        <ul className="text-xs text-blue-700 space-y-1">
-          <li>• Connect nodes left to right</li>
-          <li>• State → LLM → Router → Output</li>
-          <li>• Rule Checker can be placed anywhere</li>
-          <li>• Click nodes to edit properties</li>
-        </ul>
+      {/* Flow Guidelines */}
+      <div className="border-t border-gray-200 pt-6">
+        <h4 className="text-sm font-semibold text-gray-800 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
+          Flow Guidelines
+        </h4>
+        <div className="space-y-3 text-xs text-gray-600">
+          <div className="flex items-start space-x-2">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span>Left-to-right execution flow</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span>Edge-based node connections</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span>Constitution rules enforced globally</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <span className="text-amber-500 mt-0.5">⚠</span>
+            <span>Violations highlighted in red during execution</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="border-t border-gray-200 pt-6 mt-6">
+        <h4 className="text-sm font-semibold text-gray-800 mb-4">Quick Actions</h4>
+        <div className="space-y-2">
+          <button className="w-full p-3 text-left text-sm text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100 bg-white">
+            <span className="mr-2">📋</span>Load Template
+          </button>
+          <button className="w-full p-3 text-left text-sm text-green-700 hover:bg-green-50 rounded-lg transition-colors border border-green-100 bg-white">
+            <span className="mr-2">💾</span>Save Workflow
+          </button>
+          <button className="w-full p-3 text-left text-sm text-purple-700 hover:bg-purple-50 rounded-lg transition-colors border border-purple-100 bg-white">
+            <span className="mr-2">🏛️</span>Constitution Rules
+          </button>
+        </div>
       </div>
     </div>
   );

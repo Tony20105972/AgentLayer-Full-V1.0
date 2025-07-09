@@ -18,7 +18,7 @@ import '@xyflow/react/dist/style.css';
 
 import NodeLibrary from './builder/NodeLibrary';
 import BuilderToolbar from './builder/BuilderToolbar';
-import DynamicPropertiesPanel from './builder/DynamicPropertiesPanel';
+import LangGraphPropertiesPanel from './builder/LangGraphPropertiesPanel';
 import ExecutionIndicator from './builder/ExecutionIndicator';
 import { nodeTypes } from './builder/nodeTypes';
 import { NodeData } from '@/types/flow';
@@ -39,6 +39,7 @@ const BuilderContent: React.FC = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
   const [apiKeysSaved, setApiKeysSaved] = useState(false);
+  const [isReplaying, setIsReplaying] = useState(false);
   
   const reactFlowInstance = useReactFlow();
 
@@ -48,7 +49,8 @@ const BuilderContent: React.FC = () => {
         ...params,
         id: `e${params.source}-${params.target}`,
         type: 'smoothstep',
-        style: { strokeWidth: 2 },
+        style: { strokeWidth: 2, stroke: '#6366f1' },
+        animated: true,
       };
       setEdges((eds) => addEdge(newEdge, eds));
     },
@@ -103,59 +105,49 @@ const BuilderContent: React.FC = () => {
     switch (type) {
       case 'state':
         return { 
-          label: 'State', 
+          label: 'State Manager', 
           config: { 
-            initialState: '{\n  "topic": "",\n  "context": {}\n}',
-            inputVars: ['topic'],
+            initialState: '{\n  "input": "",\n  "context": {}\n}',
+            inputVars: ['input'],
             outputVars: ['state']
           } 
         };
       case 'llm':
         return { 
-          label: 'LLM Node', 
+          label: 'AI Agent Node', 
           config: { 
-            prompt: 'Write a blog about {topic}',
+            prompt: 'Process the following input: {input}',
             temperature: 0.7,
             model: 'gpt-4',
-            inputVars: ['topic'],
-            outputVars: ['blog_post']
-          } 
-        };
-      case 'tool':
-        return { 
-          label: 'Tool Node', 
-          config: { 
-            toolName: 'translator',
-            params: '{"lang": "fr"}',
-            inputVars: ['text'],
-            outputVars: ['translated_text']
+            inputVars: ['input'],
+            outputVars: ['response']
           } 
         };
       case 'router':
         return { 
-          label: 'Router', 
+          label: 'Decision Router', 
           config: { 
-            conditions: 'if sentiment == "negative" → warn_node',
-            inputVars: ['sentiment'],
-            outputVars: ['decision_path']
+            conditions: 'if response.sentiment == "negative" → moderation_node\nelse → output_node',
+            inputVars: ['response'],
+            outputVars: ['route_decision']
           } 
         };
       case 'ruleChecker':
         return { 
-          label: 'Rule Checker', 
+          label: 'Constitution Checker', 
           config: { 
-            ruleSetName: 'no_bias',
+            ruleSetName: 'default_constitution',
             inputVars: ['response'],
-            outputVars: ['is_valid']
+            outputVars: ['compliance_check']
           } 
         };
       case 'output':
         return { 
-          label: 'Output', 
+          label: 'Output Handler', 
           config: { 
             outputType: 'webhook',
-            targetUrl: 'https://hooks.example.com',
-            sendVars: ['blog_post']
+            targetUrl: 'https://hooks.example.com/webhook',
+            sendVars: ['response']
           } 
         };
       default:
@@ -171,13 +163,21 @@ const BuilderContent: React.FC = () => {
     
     for (const node of sortedNodes) {
       setExecutingNodeId(node.id);
+      
+      // Update node visual state
+      setNodes(nds => nds.map(n => 
+        n.id === node.id 
+          ? { ...n, data: { ...n.data, isExecuting: true } }
+          : { ...n, data: { ...n.data, isExecuting: false } }
+      ));
+      
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate rule violations
-      if (node.type === 'ruleChecker' && Math.random() > 0.7) {
+      // Simulate rule violations on RuleChecker nodes
+      if (node.type === 'ruleChecker' && Math.random() > 0.6) {
         setNodes(nds => nds.map(n => 
           n.id === node.id 
-            ? { ...n, data: { ...n.data, hasViolation: true } }
+            ? { ...n, data: { ...n.data, hasViolation: true, isExecuting: false } }
             : n
         ));
         
@@ -189,11 +189,34 @@ const BuilderContent: React.FC = () => {
         ));
         
         await new Promise(resolve => setTimeout(resolve, 1500));
+      } else {
+        setNodes(nds => nds.map(n => 
+          n.id === node.id 
+            ? { ...n, data: { ...n.data, isExecuting: false } }
+            : n
+        ));
       }
     }
     
     setIsExecuting(false);
     setExecutingNodeId(null);
+  };
+
+  const replayFlow = async () => {
+    setIsReplaying(true);
+    // Reset all violations and states
+    setNodes(nds => nds.map(n => ({
+      ...n,
+      data: { ...n.data, hasViolation: false, isExecuting: false }
+    })));
+    setEdges(eds => eds.map(e => ({
+      ...e,
+      style: { strokeWidth: 2, stroke: '#6366f1' }
+    })));
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await executeFlow();
+    setIsReplaying(false);
   };
 
   const deleteSelectedNode = () => {
@@ -209,8 +232,31 @@ const BuilderContent: React.FC = () => {
     setTimeout(() => setApiKeysSaved(false), 2000);
   };
 
+  const optimizeNodeWithAI = (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // AI optimization simulation
+    setNodes(nds => nds.map(n => {
+      if (n.id === nodeId && n.type === 'llm') {
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            config: {
+              ...n.data.config,
+              prompt: `[AI Optimized] ${n.data.config?.prompt || ''}`,
+              temperature: 0.8
+            }
+          }
+        };
+      }
+      return n;
+    }));
+  };
+
   return (
-    <div className="h-screen bg-white flex">
+    <div className="h-screen bg-gray-50 flex">
       {/* Left Sidebar - Node Library */}
       <NodeLibrary />
       
@@ -218,7 +264,9 @@ const BuilderContent: React.FC = () => {
         {/* Top Toolbar */}
         <BuilderToolbar 
           onExecute={executeFlow}
+          onReplay={replayFlow}
           isExecuting={isExecuting}
+          isReplaying={isReplaying}
           onSaveApiKeys={saveApiKeys}
           apiKeysSaved={apiKeysSaved}
           onDeleteNode={deleteSelectedNode}
@@ -227,7 +275,7 @@ const BuilderContent: React.FC = () => {
         
         {/* Main Canvas */}
         <div className="flex-1 flex">
-          <div className="flex-1 relative bg-gray-50" ref={reactFlowWrapper}>
+          <div className="flex-1 relative" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes.map(node => ({
                 ...node,
@@ -258,20 +306,23 @@ const BuilderContent: React.FC = () => {
             </ReactFlow>
           </div>
           
-          {/* Right Panel - Dynamic Properties */}
-          <DynamicPropertiesPanel 
+          {/* Right Panel - LangGraph Properties */}
+          <LangGraphPropertiesPanel 
             selectedNode={selectedNode}
             onUpdateNode={(nodeId, updates) => {
               setNodes(nds => nds.map(n => 
                 n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
               ));
             }}
+            onOptimizeWithAI={optimizeNodeWithAI}
+            nodes={nodes}
           />
         </div>
         
         {/* Execution Indicator */}
         <ExecutionIndicator 
           isExecuting={isExecuting}
+          isReplaying={isReplaying}
           currentNodeId={executingNodeId}
           nodes={nodes}
         />

@@ -5,19 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, 
+  Pause, 
   Save, 
   Download, 
   Key, 
   Trash2, 
   Sparkles,
-  Check,
+  RotateCcw,
   Loader2
 } from 'lucide-react';
 import APIKeyModal from './APIKeyModal';
 
 interface BuilderToolbarProps {
   onExecute: () => void;
+  onReplay: () => void;
   isExecuting: boolean;
+  isReplaying: boolean;
   onSaveApiKeys: () => void;
   apiKeysSaved: boolean;
   onDeleteNode: () => void;
@@ -26,102 +29,115 @@ interface BuilderToolbarProps {
 
 const BuilderToolbar: React.FC<BuilderToolbarProps> = ({
   onExecute,
+  onReplay,
   isExecuting,
+  isReplaying,
   onSaveApiKeys,
   apiKeysSaved,
   onDeleteNode,
   hasSelectedNode
 }) => {
   const [showApiModal, setShowApiModal] = useState(false);
-  const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
+  const [naturalLanguage, setNaturalLanguage] = useState('');
 
   const handleGenerateFlow = () => {
-    if (!naturalLanguageInput.trim()) return;
-    // AI flow generation logic would go here
-    console.log('Generating flow:', naturalLanguageInput);
-    setNaturalLanguageInput('');
+    if (naturalLanguage.trim()) {
+      // This would generate nodes based on natural language
+      console.log('Generating flow from:', naturalLanguage);
+      setNaturalLanguage('');
+    }
   };
 
   return (
     <>
       <div className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between">
-        {/* Left Section - AI Generation */}
-        <div className="flex items-center space-x-4 flex-1 max-w-md">
-          <div className="flex items-center space-x-2 flex-1">
+        <div className="flex items-center space-x-4">
+          {/* Natural Language Generation */}
+          <div className="flex items-center space-x-2">
             <Input
-              placeholder="Describe your agent flow... (e.g., Summarize → Translate → Slack)"
-              value={naturalLanguageInput}
-              onChange={(e) => setNaturalLanguageInput(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => e.key === 'Enter' && handleGenerateFlow()}
+              placeholder="Describe your agent flow... (e.g., 'Summarize → Translate → Slack')"
+              value={naturalLanguage}
+              onChange={(e) => setNaturalLanguage(e.target.value)}
+              className="w-96"
+              onKeyPress={(e) => e.key === 'Enter' && handleGenerateFlow()}
             />
-            <Button 
+            <Button
               onClick={handleGenerateFlow}
-              disabled={!naturalLanguageInput.trim()}
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700"
+              disabled={!naturalLanguage.trim()}
+              className="flex items-center space-x-2"
             >
-              <Sparkles className="w-4 h-4 mr-1" />
-              Generate
+              <Sparkles className="w-4 h-4" />
+              <span>Generate</span>
             </Button>
           </div>
         </div>
 
-        {/* Right Section - Actions */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          {/* Execution Controls */}
+          <Button
+            onClick={onExecute}
+            disabled={isExecuting || isReplaying}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+          >
+            {isExecuting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4" />
+            )}
+            <span>{isExecuting ? 'Running...' : 'Run Flow'}</span>
+          </Button>
+
+          <Button
+            onClick={onReplay}
+            disabled={isExecuting || isReplaying}
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            {isReplaying ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
+            <span>{isReplaying ? 'Replaying...' : 'Replay'}</span>
+          </Button>
+
+          {/* API Keys */}
+          <Button
+            onClick={() => setShowApiModal(true)}
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            <Key className="w-4 h-4" />
+            <span>API Keys</span>
+            {apiKeysSaved && <Badge className="ml-1 bg-green-500">Saved ✅</Badge>}
+          </Button>
+
+          {/* Node Actions */}
           {hasSelectedNode && (
             <Button
               onClick={onDeleteNode}
               variant="outline"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="flex items-center space-x-2 text-red-600 hover:text-red-700"
             >
               <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
             </Button>
           )}
 
-          <Button
-            onClick={() => setShowApiModal(true)}
-            variant="outline"
-            size="sm"
-            className="relative"
-          >
-            <Key className="w-4 h-4 mr-2" />
-            API Keys
-            {apiKeysSaved && (
-              <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1">
-                <Check className="w-3 h-3" />
-              </Badge>
-            )}
+          {/* Save & Export */}
+          <Button variant="outline" className="flex items-center space-x-2">
+            <Save className="w-4 h-4" />
+            <span>Save</span>
           </Button>
 
-          <Button variant="outline" size="sm">
-            <Save className="w-4 h-4 mr-2" />
-            Save
-          </Button>
-
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-
-          <Button 
-            onClick={onExecute}
-            disabled={isExecuting}
-            className="bg-green-600 hover:bg-green-700"
-            size="sm"
-          >
-            {isExecuting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4 mr-2" />
-            )}
-            {isExecuting ? 'Running...' : 'Run Flow'}
+          <Button variant="outline" className="flex items-center space-x-2">
+            <Download className="w-4 h-4" />
+            <span>Export</span>
           </Button>
         </div>
       </div>
 
-      <APIKeyModal 
+      <APIKeyModal
         isOpen={showApiModal}
         onClose={() => setShowApiModal(false)}
         onSave={onSaveApiKeys}

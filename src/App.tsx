@@ -12,6 +12,7 @@ import Builder from "./pages/Builder";
 import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import DAO from "./pages/DAO";
+import Constitution from "./pages/Constitution";
 import RunDetails from "./pages/RunDetails";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/dao" element={<DAO />} />
+              <Route path="/constitution" element={<Constitution />} />
               <Route path="/run/:uuid" element={<RunDetails />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
