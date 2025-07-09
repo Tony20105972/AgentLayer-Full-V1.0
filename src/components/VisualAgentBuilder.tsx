@@ -16,13 +16,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import NodeLibraryPanel from './builder/NodeLibraryPanel';
-import TopToolbar from './builder/TopToolbar';
-import PropertyPanel from './builder/PropertyPanel';
-import ExecutionTracker from './builder/ExecutionTracker';
+import NodeLibrary from './builder/NodeLibrary';
+import BuilderToolbar from './builder/BuilderToolbar';
+import DynamicPropertiesPanel from './builder/DynamicPropertiesPanel';
+import ExecutionIndicator from './builder/ExecutionIndicator';
 import { nodeTypes } from './builder/nodeTypes';
-import { useFlowStore } from '@/stores/flowStore';
-import { NodeData, NodeConfig } from '@/types/flow';
+import { NodeData } from '@/types/flow';
 
 const VisualAgentBuilder: React.FC = () => {
   return (
@@ -39,12 +38,20 @@ const BuilderContent: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
+  const [apiKeysSaved, setApiKeysSaved] = useState(false);
   
-  const { constitution, setConstitution } = useFlowStore();
   const reactFlowInstance = useReactFlow();
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      const newEdge = {
+        ...params,
+        id: `e${params.source}-${params.target}`,
+        type: 'smoothstep',
+        style: { strokeWidth: 2 },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
     [setEdges]
   );
 
@@ -54,6 +61,10 @@ const BuilderContent: React.FC = () => {
     },
     []
   );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+  }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -93,37 +104,58 @@ const BuilderContent: React.FC = () => {
       case 'state':
         return { 
           label: 'State', 
-          config: { initialState: '{\n  "input": "",\n  "context": {}\n}' } 
-        };
-      case 'node':
-        return { 
-          label: 'AI Node', 
           config: { 
-            prompt: 'You are a helpful AI assistant.',
-            inputs: [],
-            outputs: ['result'],
-            model: 'gpt-4'
+            initialState: '{\n  "topic": "",\n  "context": {}\n}',
+            inputVars: ['topic'],
+            outputVars: ['state']
+          } 
+        };
+      case 'llm':
+        return { 
+          label: 'LLM Node', 
+          config: { 
+            prompt: 'Write a blog about {topic}',
+            temperature: 0.7,
+            model: 'gpt-4',
+            inputVars: ['topic'],
+            outputVars: ['blog_post']
+          } 
+        };
+      case 'tool':
+        return { 
+          label: 'Tool Node', 
+          config: { 
+            toolName: 'translator',
+            params: '{"lang": "fr"}',
+            inputVars: ['text'],
+            outputVars: ['translated_text']
           } 
         };
       case 'router':
         return { 
           label: 'Router', 
           config: { 
-            conditions: [{ name: 'default', expression: 'true' }] 
+            conditions: 'if sentiment == "negative" → warn_node',
+            inputVars: ['sentiment'],
+            outputVars: ['decision_path']
           } 
         };
       case 'ruleChecker':
         return { 
           label: 'Rule Checker', 
-          config: { rules: constitution?.rules || [] } 
+          config: { 
+            ruleSetName: 'no_bias',
+            inputVars: ['response'],
+            outputVars: ['is_valid']
+          } 
         };
       case 'output':
         return { 
           label: 'Output', 
           config: { 
-            destination: 'webhook',
-            template: 'Result: {{result}}',
-            url: ''
+            outputType: 'webhook',
+            targetUrl: 'https://hooks.example.com',
+            sendVars: ['blog_post']
           } 
         };
       default:
@@ -139,17 +171,24 @@ const BuilderContent: React.FC = () => {
     
     for (const node of sortedNodes) {
       setExecutingNodeId(node.id);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate rule checking
+      // Simulate rule violations
       if (node.type === 'ruleChecker' && Math.random() > 0.7) {
-        // Simulate rule violation
         setNodes(nds => nds.map(n => 
           n.id === node.id 
             ? { ...n, data: { ...n.data, hasViolation: true } }
             : n
         ));
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mark connecting edges as violated
+        setEdges(eds => eds.map(e => 
+          e.source === node.id || e.target === node.id
+            ? { ...e, style: { ...e.style, stroke: '#ef4444', strokeWidth: 3 } }
+            : e
+        ));
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     
@@ -157,27 +196,38 @@ const BuilderContent: React.FC = () => {
     setExecutingNodeId(null);
   };
 
+  const deleteSelectedNode = () => {
+    if (selectedNode) {
+      setNodes(nds => nds.filter(n => n.id !== selectedNode.id));
+      setEdges(eds => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
+      setSelectedNode(null);
+    }
+  };
+
+  const saveApiKeys = () => {
+    setApiKeysSaved(true);
+    setTimeout(() => setApiKeysSaved(false), 2000);
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="h-screen bg-white flex">
       {/* Left Sidebar - Node Library */}
-      <NodeLibraryPanel />
+      <NodeLibrary />
       
       <div className="flex-1 flex flex-col">
         {/* Top Toolbar */}
-        <TopToolbar 
-          nodes={nodes}
-          edges={edges}
+        <BuilderToolbar 
           onExecute={executeFlow}
           isExecuting={isExecuting}
-          onGenerateFlow={(prompt) => {
-            // AI Flow generation logic will be implemented here
-            console.log('Generating flow from prompt:', prompt);
-          }}
+          onSaveApiKeys={saveApiKeys}
+          apiKeysSaved={apiKeysSaved}
+          onDeleteNode={deleteSelectedNode}
+          hasSelectedNode={!!selectedNode}
         />
         
         {/* Main Canvas */}
         <div className="flex-1 flex">
-          <div className="flex-1 relative" ref={reactFlowWrapper}>
+          <div className="flex-1 relative bg-gray-50" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes.map(node => ({
                 ...node,
@@ -191,42 +241,40 @@ const BuilderContent: React.FC = () => {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
               onDrop={onDrop}
               onDragOver={onDragOver}
               nodeTypes={nodeTypes}
               fitView
-              className="bg-slate-900"
+              className="bg-white"
             >
-              <Controls className="bg-white/90 backdrop-blur" />
+              <Controls className="bg-white shadow-lg border rounded-lg" />
               <Background 
                 variant={BackgroundVariant.Dots} 
                 gap={20} 
                 size={1} 
-                color="#374151" 
+                color="#e5e7eb" 
               />
             </ReactFlow>
           </div>
           
-          {/* Right Panel - Properties */}
-          <PropertyPanel 
+          {/* Right Panel - Dynamic Properties */}
+          <DynamicPropertiesPanel 
             selectedNode={selectedNode}
             onUpdateNode={(nodeId, updates) => {
               setNodes(nds => nds.map(n => 
                 n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
               ));
             }}
-            constitution={constitution}
-            onUpdateConstitution={setConstitution}
           />
         </div>
         
-        {/* Bottom Execution Tracker */}
-        {isExecuting && (
-          <ExecutionTracker 
-            currentNodeId={executingNodeId}
-            nodes={nodes}
-          />
-        )}
+        {/* Execution Indicator */}
+        <ExecutionIndicator 
+          isExecuting={isExecuting}
+          currentNodeId={executingNodeId}
+          nodes={nodes}
+        />
       </div>
     </div>
   );
