@@ -417,7 +417,7 @@ Action needed: {{action_items}}"
       <div className="p-3 bg-purple-50 rounded-lg">
         <div className="text-sm text-purple-800 font-medium mb-1">📤 Output Tips</div>
         <div className="text-xs text-purple-600">
-          • Use {{field_name}} to insert data from your flow<br/>
+          • Use {`{{field_name}}`} to insert data from your flow<br/>
           • Test your webhook URL before running the flow<br/>
           • You can have multiple Output blocks for different channels
         </div>
