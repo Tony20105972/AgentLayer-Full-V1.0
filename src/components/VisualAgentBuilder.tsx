@@ -22,6 +22,7 @@ import LangGraphPropertiesPanel from './builder/LangGraphPropertiesPanel';
 import ExecutionIndicator from './builder/ExecutionIndicator';
 import { nodeTypes } from './builder/nodeTypes';
 import { NodeData } from '@/types/flow';
+import { useToast } from '@/hooks/use-toast';
 
 const VisualAgentBuilder: React.FC = () => {
   return (
@@ -40,6 +41,7 @@ const BuilderContent: React.FC = () => {
   const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
   const [apiKeysSaved, setApiKeysSaved] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
+  const { toast } = useToast();
   
   const reactFlowInstance = useReactFlow();
 
@@ -53,15 +55,24 @@ const BuilderContent: React.FC = () => {
         animated: true,
       };
       setEdges((eds) => addEdge(newEdge, eds));
+      
+      toast({
+        title: "Blocks Connected",
+        description: "Your flow connection has been created successfully.",
+      });
     },
-    [setEdges]
+    [setEdges, toast]
   );
 
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       setSelectedNode(node);
+      toast({
+        title: `${node.type?.toUpperCase()} Block Selected`,
+        description: "Edit settings in the right panel",
+      });
     },
-    []
+    [toast]
   );
 
   const onPaneClick = useCallback(() => {
@@ -97,9 +108,26 @@ const BuilderContent: React.FC = () => {
       };
 
       setNodes((nds) => nds.concat(newNode));
+      setSelectedNode(newNode);
+      
+      toast({
+        title: "Block Added",
+        description: `${getBlockDisplayName(type)} has been added to your flow.`,
+      });
     },
-    [reactFlowInstance, setNodes]
+    [reactFlowInstance, setNodes, toast]
   );
+
+  const getBlockDisplayName = (type: string): string => {
+    const names = {
+      'state': 'State Manager',
+      'llm': 'AI Agent Node',
+      'router': 'Decision Router',
+      'ruleChecker': 'Constitution Checker',
+      'output': 'Output Handler'
+    };
+    return names[type as keyof typeof names] || type;
+  };
 
   const getDefaultNodeData = (type: string): NodeData => {
     switch (type) {
@@ -107,59 +135,72 @@ const BuilderContent: React.FC = () => {
         return { 
           label: 'State Manager', 
           config: { 
-            initialState: '{\n  "input": "",\n  "context": {}\n}',
-            inputVars: ['input'],
-            outputVars: ['state']
+            initialState: '{\n  "user_input": "",\n  "context": {}\n}',
+            inputVars: ['user_input'],
+            outputVars: ['processed_data']
           } 
         };
       case 'llm':
         return { 
-          label: 'AI Agent Node', 
+          label: 'AI Assistant', 
           config: { 
-            prompt: 'Process the following input: {input}',
+            prompt: 'You are a helpful AI assistant. Process the user input and provide a helpful response.',
             temperature: 0.7,
             model: 'gpt-4',
-            inputVars: ['input'],
-            outputVars: ['response']
+            inputVars: ['user_input'],
+            outputVars: ['ai_response']
           } 
         };
       case 'router':
         return { 
           label: 'Decision Router', 
           config: { 
-            conditions: 'if response.sentiment == "negative" → moderation_node\nelse → output_node',
-            inputVars: ['response'],
+            conditions: 'If ai_response contains "urgent" → priority_handler\nIf ai_response contains "question" → question_handler\nOtherwise → standard_handler',
+            inputVars: ['ai_response'],
             outputVars: ['route_decision']
           } 
         };
       case 'ruleChecker':
         return { 
-          label: 'Constitution Checker', 
+          label: 'Safety Guardian', 
           config: { 
             ruleSetName: 'default_constitution',
-            inputVars: ['response'],
-            outputVars: ['compliance_check']
+            inputVars: ['ai_response'],
+            outputVars: ['safety_check']
           } 
         };
       case 'output':
         return { 
-          label: 'Output Handler', 
+          label: 'Send to Slack', 
           config: { 
-            outputType: 'webhook',
-            targetUrl: 'https://hooks.example.com/webhook',
-            sendVars: ['response']
+            outputType: 'slack',
+            targetUrl: '',
+            template: '🤖 AI Response: {{ai_response}}\n\nStatus: {{safety_check}}',
+            sendVars: ['ai_response', 'safety_check']
           } 
         };
       default:
-        return { label: 'Node' };
+        return { label: 'New Block' };
     }
   };
 
   const executeFlow = async () => {
-    if (nodes.length === 0) return;
+    if (nodes.length === 0) {
+      toast({
+        title: "No Flow to Run",
+        description: "Add some blocks to your flow first.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsExecuting(true);
     const sortedNodes = [...nodes].sort((a, b) => a.position.x - b.position.x);
+    
+    toast({
+      title: "Flow Execution Started",
+      description: "Your AI agent flow is now running...",
+    });
     
     for (const node of sortedNodes) {
       setExecutingNodeId(node.id);
@@ -174,7 +215,7 @@ const BuilderContent: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Simulate rule violations on RuleChecker nodes
-      if (node.type === 'ruleChecker' && Math.random() > 0.6) {
+      if (node.type === 'ruleChecker' && Math.random() > 0.7) {
         setNodes(nds => nds.map(n => 
           n.id === node.id 
             ? { ...n, data: { ...n.data, hasViolation: true, isExecuting: false } }
@@ -188,6 +229,12 @@ const BuilderContent: React.FC = () => {
             : e
         ));
         
+        toast({
+          title: "Constitution Violation Detected",
+          description: `Safety issue found in ${node.data.label}`,
+          variant: "destructive"
+        });
+        
         await new Promise(resolve => setTimeout(resolve, 1500));
       } else {
         setNodes(nds => nds.map(n => 
@@ -200,10 +247,21 @@ const BuilderContent: React.FC = () => {
     
     setIsExecuting(false);
     setExecutingNodeId(null);
+    
+    toast({
+      title: "Flow Completed",
+      description: "Your AI agent flow has finished executing.",
+    });
   };
 
   const replayFlow = async () => {
     setIsReplaying(true);
+    
+    toast({
+      title: "Replaying Flow",
+      description: "Resetting and re-running your flow...",
+    });
+    
     // Reset all violations and states
     setNodes(nds => nds.map(n => ({
       ...n,
@@ -223,13 +281,23 @@ const BuilderContent: React.FC = () => {
     if (selectedNode) {
       setNodes(nds => nds.filter(n => n.id !== selectedNode.id));
       setEdges(eds => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
+      
+      toast({
+        title: "Block Deleted",
+        description: `${selectedNode.data.label} has been removed from your flow.`,
+      });
+      
       setSelectedNode(null);
     }
   };
 
   const saveApiKeys = () => {
     setApiKeysSaved(true);
-    setTimeout(() => setApiKeysSaved(false), 2000);
+    toast({
+      title: "API Keys Saved",
+      description: "Your API configuration has been saved successfully.",
+    });
+    setTimeout(() => setApiKeysSaved(false), 3000);
   };
 
   const optimizeNodeWithAI = (nodeId: string) => {
@@ -253,6 +321,11 @@ const BuilderContent: React.FC = () => {
       }
       return n;
     }));
+
+    toast({
+      title: "AI Optimization Applied",
+      description: "Your block has been optimized with AI suggestions.",
+    });
   };
 
   return (
@@ -295,6 +368,8 @@ const BuilderContent: React.FC = () => {
               nodeTypes={nodeTypes}
               fitView
               className="bg-white"
+              snapToGrid={true}
+              snapGrid={[20, 20]}
             >
               <Controls className="bg-white shadow-lg border rounded-lg" />
               <Background 
@@ -306,7 +381,7 @@ const BuilderContent: React.FC = () => {
             </ReactFlow>
           </div>
           
-          {/* Right Panel - LangGraph Properties */}
+          {/* Right Panel - Properties */}
           <LangGraphPropertiesPanel 
             selectedNode={selectedNode}
             onUpdateNode={(nodeId, updates) => {

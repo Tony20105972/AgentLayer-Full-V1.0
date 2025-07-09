@@ -5,14 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, 
-  Pause, 
   Save, 
   Download, 
   Key, 
   Trash2, 
   Sparkles,
   RotateCcw,
-  Loader2
+  Loader2,
+  Zap,
+  Share
 } from 'lucide-react';
 import APIKeyModal from './APIKeyModal';
 
@@ -42,7 +43,6 @@ const BuilderToolbar: React.FC<BuilderToolbarProps> = ({
 
   const handleGenerateFlow = () => {
     if (naturalLanguage.trim()) {
-      // This would generate nodes based on natural language
       console.log('Generating flow from:', naturalLanguage);
       setNaturalLanguage('');
     }
@@ -50,66 +50,86 @@ const BuilderToolbar: React.FC<BuilderToolbarProps> = ({
 
   return (
     <>
-      <div className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between">
+      <div className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
-          {/* Natural Language Generation */}
+          {/* AI Flow Generator */}
           <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 px-3 py-2 rounded-lg border border-purple-200">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-purple-700">AI Flow Builder</span>
+            </div>
             <Input
-              placeholder="Describe your agent flow... (e.g., 'Summarize → Translate → Slack')"
+              placeholder="Describe your agent flow... (e.g., 'Email summarizer that sends urgent ones to Slack')"
               value={naturalLanguage}
               onChange={(e) => setNaturalLanguage(e.target.value)}
-              className="w-96"
+              className="w-96 text-sm"
               onKeyPress={(e) => e.key === 'Enter' && handleGenerateFlow()}
             />
             <Button
               onClick={handleGenerateFlow}
               disabled={!naturalLanguage.trim()}
-              className="flex items-center space-x-2"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Generate</span>
+              <Zap className="w-4 h-4 mr-2" />
+              Generate
             </Button>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Execution Controls */}
-          <Button
-            onClick={onExecute}
-            disabled={isExecuting || isReplaying}
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-          >
-            {isExecuting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span>{isExecuting ? 'Running...' : 'Run Flow'}</span>
-          </Button>
+          {/* Flow Control */}
+          <div className="flex items-center space-x-2 border-r border-gray-200 pr-3">
+            <Button
+              onClick={onExecute}
+              disabled={isExecuting || isReplaying}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium"
+            >
+              {isExecuting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Run Flow
+                </>
+              )}
+            </Button>
 
-          <Button
-            onClick={onReplay}
-            disabled={isExecuting || isReplaying}
-            variant="outline"
-            className="flex items-center space-x-2"
-          >
-            {isReplaying ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RotateCcw className="w-4 h-4" />
-            )}
-            <span>{isReplaying ? 'Replaying...' : 'Replay'}</span>
-          </Button>
+            <Button
+              onClick={onReplay}
+              disabled={isExecuting || isReplaying}
+              variant="outline"
+              className="border-orange-200 text-orange-700 hover:bg-orange-50"
+            >
+              {isReplaying ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Replaying...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Replay
+                </>
+              )}
+            </Button>
+          </div>
 
-          {/* API Keys */}
+          {/* Configuration */}
           <Button
             onClick={() => setShowApiModal(true)}
             variant="outline"
-            className="flex items-center space-x-2"
+            className="border-blue-200 text-blue-700 hover:bg-blue-50"
           >
-            <Key className="w-4 h-4" />
+            <Key className="w-4 h-4 mr-2" />
             <span>API Keys</span>
-            {apiKeysSaved && <Badge className="ml-1 bg-green-500">Saved ✅</Badge>}
+            {apiKeysSaved && (
+              <Badge className="ml-2 bg-green-500 text-white text-xs px-2 py-0">
+                ✅ Saved
+              </Badge>
+            )}
           </Button>
 
           {/* Node Actions */}
@@ -117,23 +137,30 @@ const BuilderToolbar: React.FC<BuilderToolbarProps> = ({
             <Button
               onClick={onDeleteNode}
               variant="outline"
-              className="flex items-center space-x-2 text-red-600 hover:text-red-700"
+              className="border-red-200 text-red-700 hover:bg-red-50"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete</span>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Block
             </Button>
           )}
 
-          {/* Save & Export */}
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Save</span>
-          </Button>
+          {/* Save & Share */}
+          <div className="flex items-center space-x-2 border-l border-gray-200 pl-3">
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
 
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </Button>
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
+              <Share className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
       </div>
 

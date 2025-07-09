@@ -1,3 +1,4 @@
+
 export interface NodeConfig {
   prompt?: string;
   model?: string;
@@ -32,4 +33,29 @@ export interface FlowNode {
   type: string;
   position: { x: number; y: number };
   data: NodeData;
+}
+
+export interface ConstitutionRule {
+  id: string;
+  name: string;
+  description: string;
+  type: 'keyword' | 'regex' | 'custom' | 'ai_safety';
+  pattern?: string;
+  keywords?: string[];
+  severity: 'block' | 'warn' | 'flag';
+  message: string;
+  enabled: boolean;
+  appliesTo: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConstitutionSet {
+  id: string;
+  name: string;
+  description: string;
+  rules: ConstitutionRule[];
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
