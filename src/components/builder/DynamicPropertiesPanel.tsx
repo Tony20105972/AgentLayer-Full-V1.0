@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Settings } from 'lucide-react';
+import { NodeConfig } from '@/types/flow';
 
 interface DynamicPropertiesPanelProps {
   selectedNode: Node | null;
@@ -31,9 +32,10 @@ const DynamicPropertiesPanel: React.FC<DynamicPropertiesPanelProps> = ({
   }
 
   const updateConfig = (field: string, value: any) => {
+    const currentConfig = (selectedNode.data.config as NodeConfig) || {};
     onUpdateNode(selectedNode.id, {
       config: {
-        ...selectedNode.data.config,
+        ...currentConfig,
         [field]: value
       }
     });
@@ -44,7 +46,7 @@ const DynamicPropertiesPanel: React.FC<DynamicPropertiesPanelProps> = ({
   };
 
   const renderNodeProperties = () => {
-    const config = selectedNode.data.config || {};
+    const config = (selectedNode.data.config as NodeConfig) || {};
     
     switch (selectedNode.type) {
       case 'state':
@@ -178,7 +180,7 @@ const DynamicPropertiesPanel: React.FC<DynamicPropertiesPanelProps> = ({
             <div>
               <Label>Condition Logic</Label>
               <Textarea
-                value={config.conditions || ''}
+                value={config.conditions as string || ''}
                 onChange={(e) => updateConfig('conditions', e.target.value)}
                 placeholder='if sentiment == "negative" → warn_node'
                 rows={3}
@@ -289,7 +291,7 @@ const DynamicPropertiesPanel: React.FC<DynamicPropertiesPanelProps> = ({
           <div>
             <Label>Node Name</Label>
             <Input
-              value={selectedNode.data.label || ''}
+              value={String(selectedNode.data.label || '')}
               onChange={(e) => updateLabel(e.target.value)}
               placeholder="Enter node name"
             />

@@ -31,7 +31,7 @@ const ExecutionIndicator: React.FC<ExecutionIndicatorProps> = ({
             </div>
             {currentNode && (
               <Badge variant="outline" className="bg-blue-50">
-                Current: {currentNode.data.label}
+                Current: {String(currentNode.data.label)}
               </Badge>
             )}
           </>
