@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import {
   ReactFlow,
@@ -133,7 +132,7 @@ const BuilderContent: React.FC = () => {
     switch (type) {
       case 'state':
         return { 
-          label: 'State Manager', 
+          label: 'My Data Hub', 
           config: { 
             initialState: '{\n  "user_input": "",\n  "context": {}\n}',
             inputVars: ['user_input'],
@@ -142,9 +141,9 @@ const BuilderContent: React.FC = () => {
         };
       case 'llm':
         return { 
-          label: 'AI Assistant', 
+          label: 'Email Summarizer', 
           config: { 
-            prompt: 'You are a helpful AI assistant. Process the user input and provide a helpful response.',
+            prompt: 'You are a helpful AI assistant. Summarize the email and identify key action items. Be concise and highlight urgent matters.',
             temperature: 0.7,
             model: 'gpt-4',
             inputVars: ['user_input'],
@@ -153,7 +152,7 @@ const BuilderContent: React.FC = () => {
         };
       case 'router':
         return { 
-          label: 'Decision Router', 
+          label: 'Priority Router', 
           config: { 
             conditions: 'If ai_response contains "urgent" → priority_handler\nIf ai_response contains "question" → question_handler\nOtherwise → standard_handler',
             inputVars: ['ai_response'],
@@ -205,7 +204,6 @@ const BuilderContent: React.FC = () => {
     for (const node of sortedNodes) {
       setExecutingNodeId(node.id);
       
-      // Update node visual state
       setNodes(nds => nds.map(n => 
         n.id === node.id 
           ? { ...n, data: { ...n.data, isExecuting: true } }
@@ -214,7 +212,6 @@ const BuilderContent: React.FC = () => {
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate rule violations on RuleChecker nodes
       if (node.type === 'ruleChecker' && Math.random() > 0.7) {
         setNodes(nds => nds.map(n => 
           n.id === node.id 
@@ -222,7 +219,6 @@ const BuilderContent: React.FC = () => {
             : n
         ));
         
-        // Mark connecting edges as violated
         setEdges(eds => eds.map(e => 
           e.source === node.id || e.target === node.id
             ? { ...e, style: { ...e.style, stroke: '#ef4444', strokeWidth: 3 } }
@@ -262,7 +258,6 @@ const BuilderContent: React.FC = () => {
       description: "Resetting and re-running your flow...",
     });
     
-    // Reset all violations and states
     setNodes(nds => nds.map(n => ({
       ...n,
       data: { ...n.data, hasViolation: false, isExecuting: false }
@@ -304,7 +299,6 @@ const BuilderContent: React.FC = () => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
 
-    // AI optimization simulation
     setNodes(nds => nds.map(n => {
       if (n.id === nodeId && n.type === 'llm') {
         return {
@@ -330,10 +324,12 @@ const BuilderContent: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex">
-      {/* Left Sidebar - Node Library */}
-      <NodeLibrary />
+      {/* Left Sidebar - Node Library - ALWAYS VISIBLE */}
+      <div className="flex-shrink-0">
+        <NodeLibrary />
+      </div>
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Toolbar */}
         <BuilderToolbar 
           onExecute={executeFlow}
@@ -347,7 +343,7 @@ const BuilderContent: React.FC = () => {
         />
         
         {/* Main Canvas */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-h-0">
           <div className="flex-1 relative" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes.map(node => ({
@@ -381,17 +377,19 @@ const BuilderContent: React.FC = () => {
             </ReactFlow>
           </div>
           
-          {/* Right Panel - Properties */}
-          <LangGraphPropertiesPanel 
-            selectedNode={selectedNode}
-            onUpdateNode={(nodeId, updates) => {
-              setNodes(nds => nds.map(n => 
-                n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
-              ));
-            }}
-            onOptimizeWithAI={optimizeNodeWithAI}
-            nodes={nodes}
-          />
+          {/* Right Panel - Properties - ALWAYS VISIBLE */}
+          <div className="flex-shrink-0">
+            <LangGraphPropertiesPanel 
+              selectedNode={selectedNode}
+              onUpdateNode={(nodeId, updates) => {
+                setNodes(nds => nds.map(n => 
+                  n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
+                ));
+              }}
+              onOptimizeWithAI={optimizeNodeWithAI}
+              nodes={nodes}
+            />
+          </div>
         </div>
         
         {/* Execution Indicator */}

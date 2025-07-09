@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Node } from '@xyflow/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -11,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, HelpCircle, Sparkles, Settings } from 'lucide-react';
+import { Plus, Trash2, HelpCircle, Sparkles, Settings, Edit3 } from 'lucide-react';
 import { NodeConfig } from '@/types/flow';
 
 interface LangGraphPropertiesPanelProps {
@@ -36,6 +35,18 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
           <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-medium mb-2">Select a Block</h3>
           <p className="text-sm">Click on any block in your flow to edit its settings</p>
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="text-sm text-blue-800 font-medium mb-2">
+              <Edit3 className="w-4 h-4 inline mr-2" />
+              Quick Start Guide
+            </div>
+            <div className="text-xs text-blue-600 space-y-1">
+              <div>1. Drag blocks from the left panel</div>
+              <div>2. Click any block to edit its name and settings</div>
+              <div>3. Connect blocks with lines (edges)</div>
+              <div>4. Click "Run Flow" to test your agent</div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -90,6 +101,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
 
   const renderStateTab = () => (
     <div className="space-y-6">
+      {/* EDITABLE BLOCK NAME */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Label className="text-sm font-medium">Block Name</Label>
@@ -98,11 +110,15 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
         <Input
           value={String(selectedNode.data.label || '')}
           onChange={(e) => updateLabel(e.target.value)}
-          placeholder="e.g., Email Input Manager"
+          placeholder="e.g., My Data Hub, Email Manager"
           className="text-sm"
         />
+        <div className="text-xs text-gray-500 mt-1">
+          Give your data manager a memorable name
+        </div>
       </div>
 
+      {/* EDITABLE INPUT FIELDS */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <Label className="text-sm font-medium">What Goes In? (Input Fields)</Label>
@@ -117,7 +133,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
               <Input
                 value={input}
                 onChange={(e) => updateInputField(index, e.target.value)}
-                placeholder="email, user_message, etc."
+                placeholder="email, user_message, file_upload"
                 className="flex-1 text-sm"
               />
               <Button
@@ -131,11 +147,19 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
             </div>
           ))}
           {(config.inputVars || []).length === 0 && (
-            <p className="text-sm text-gray-500 italic">Click "Add Field" to define what data comes into this block</p>
+            <div className="p-3 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+              <p className="text-sm text-gray-500 italic text-center">
+                Click "Add Field" to define what data comes into this block
+              </p>
+              <p className="text-xs text-gray-400 text-center mt-1">
+                Examples: email, question, document
+              </p>
+            </div>
           )}
         </div>
       </div>
 
+      {/* EDITABLE OUTPUT FIELDS */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <Label className="text-sm font-medium">What Goes Out? (Output Fields)</Label>
@@ -150,7 +174,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
               <Input
                 value={output}
                 onChange={(e) => updateOutputField(index, e.target.value)}
-                placeholder="summary, analysis, result, etc."
+                placeholder="summary, analysis, result, priority_level"
                 className="flex-1 text-sm"
               />
               <Button
@@ -164,7 +188,14 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
             </div>
           ))}
           {(config.outputVars || []).length === 0 && (
-            <p className="text-sm text-gray-500 italic">Click "Add Field" to define what data comes out of this block</p>
+            <div className="p-3 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+              <p className="text-sm text-gray-500 italic text-center">
+                Click "Add Field" to define what data comes out of this block
+              </p>
+              <p className="text-xs text-gray-400 text-center mt-1">
+                Examples: summary, decision, score
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -182,6 +213,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
 
   const renderNodeTab = () => (
     <div className="space-y-6">
+      {/* EDITABLE BLOCK NAME */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Label className="text-sm font-medium">Block Name</Label>
@@ -190,39 +222,58 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
         <Input
           value={String(selectedNode.data.label || '')}
           onChange={(e) => updateLabel(e.target.value)}
-          placeholder="e.g., Email Summarizer"
+          placeholder="e.g., Email Summarizer, Content Analyzer"
           className="text-sm"
         />
+        <div className="text-xs text-gray-500 mt-1">
+          Give your AI block a clear, descriptive name
+        </div>
       </div>
 
+      {/* FULLY EDITABLE PROMPT/INSTRUCTIONS */}
       <div>
-        <Label className="text-sm font-medium mb-3 block">What does this block do?</Label>
+        <Label className="text-sm font-medium mb-3 block">
+          What does this block do? (Instructions for AI)
+        </Label>
         <Textarea
           value={config.prompt || ''}
           onChange={(e) => updateConfig('prompt', e.target.value)}
-          placeholder="Summarize the email and identify key action items. Be concise and highlight urgent matters."
+          placeholder="Write clear instructions like you're talking to a person:
+
+Example: 'You are an email assistant. Read the email and:
+1. Summarize the main points in 2-3 sentences
+2. Identify any urgent action items
+3. Rate the priority from 1-10
+4. Suggest a brief reply if needed
+
+Be concise and professional.'"
           className="text-sm"
-          rows={4}
+          rows={8}
         />
+        <div className="text-xs text-gray-500 mt-1">
+          Write clear, specific instructions. Include examples when helpful.
+        </div>
       </div>
 
+      {/* MODEL SELECTION */}
       <div>
-        <Label className="text-sm font-medium mb-3 block">Block Type</Label>
+        <Label className="text-sm font-medium mb-3 block">AI Model</Label>
         <Select value={config.model || 'gpt-4'} onValueChange={(value) => updateConfig('model', value)}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="gpt-4">🧠 AI Assistant (GPT-4)</SelectItem>
-            <SelectItem value="gpt-3.5-turbo">⚡ Fast AI (GPT-3.5)</SelectItem>
-            <SelectItem value="claude-3">🤖 Claude AI</SelectItem>
-            <SelectItem value="function">⚙️ Custom Function</SelectItem>
+            <SelectItem value="gpt-4">🧠 Smart AI (GPT-4) - Most capable</SelectItem>
+            <SelectItem value="gpt-3.5-turbo">⚡ Fast AI (GPT-3.5) - Quick & efficient</SelectItem>
+            <SelectItem value="claude-3">🤖 Claude AI - Great for analysis</SelectItem>
+            <SelectItem value="function">⚙️ Custom Function - Advanced users</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <Separator />
 
+      {/* ADVANCED SETTINGS */}
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Advanced Settings</Label>
         <Switch checked={showAdvanced} onCheckedChange={setShowAdvanced} />
@@ -252,6 +303,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
         </div>
       )}
 
+      {/* AI OPTIMIZATION */}
       <div className="flex gap-2">
         <Button 
           onClick={() => onOptimizeWithAI(selectedNode.id)}
@@ -268,7 +320,8 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
         <div className="text-xs text-green-600">
           • Write clear instructions like you're talking to a person<br/>
           • Include examples: "Like this: [example]"<br/>
-          • Be specific about the output format you want
+          • Be specific about the output format you want<br/>
+          • Use the AI Optimize button for suggestions
         </div>
       </div>
     </div>
@@ -281,7 +334,7 @@ const LangGraphPropertiesPanel: React.FC<LangGraphPropertiesPanelProps> = ({
         <Input
           value={String(selectedNode.data.label || '')}
           onChange={(e) => updateLabel(e.target.value)}
-          placeholder="e.g., Priority Router"
+          placeholder="e.g., Priority Router, Decision Maker"
           className="text-sm"
         />
       </div>
@@ -317,7 +370,7 @@ Otherwise → send to Standard Processor"
         <Input
           value={String(selectedNode.data.label || '')}
           onChange={(e) => updateLabel(e.target.value)}
-          placeholder="e.g., Safety Guardian"
+          placeholder="e.g., Safety Guardian, Content Moderator"
           className="text-sm"
         />
       </div>
@@ -370,7 +423,7 @@ Otherwise → send to Standard Processor"
         <Input
           value={String(selectedNode.data.label || '')}
           onChange={(e) => updateLabel(e.target.value)}
-          placeholder="e.g., Send to Slack"
+          placeholder="e.g., Send to Slack, Email Notification"
           className="text-sm"
         />
       </div>
@@ -444,6 +497,9 @@ Action needed: {{action_items}}"
           <Badge variant="secondary" className="text-xs">
             {selectedNode.type?.toUpperCase()}
           </Badge>
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          All fields are editable - customize everything!
         </div>
       </div>
 
