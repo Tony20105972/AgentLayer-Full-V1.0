@@ -39,7 +39,7 @@ const GlobalNavigation: React.FC = () => {
               <Blocks className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">AgentLayer</div>
+              <div className="text-xl font-bold text-gray-900">Samantha OS</div>
               <div className="text-xs text-gray-500 -mt-1">Constitutional AI</div>
             </div>
           </Link>

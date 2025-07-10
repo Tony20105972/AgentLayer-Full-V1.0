@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WalletConnect from './WalletConnect';
 import AgentMarketplace from './AgentMarketplace';
 import DAORewards from './DAORewards';
-import { Store, Trophy } from 'lucide-react';
+import { Store, Trophy, Bot } from 'lucide-react';
 
 const WorkflowHeader: React.FC = () => {
   const [activeTab, setActiveTab] = useState('builder');
@@ -16,11 +16,11 @@ const WorkflowHeader: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AL</span>
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">AgentLayer</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Samantha OS</h1>
             <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              Web3 AI Agent Platform
+              Constitutional AI Platform
             </span>
           </div>
           <WalletConnect />

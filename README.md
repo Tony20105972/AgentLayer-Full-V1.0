@@ -1,9 +1,10 @@
-🚀 AgentLayer Builder: Ushering in the Era of Accountable AI Agents
+
+🚀 Samantha OS: Ushering in the Era of Accountable AI Agents
 💡 Vision: AI Agents, Now Under Your Control!
-AgentLayer is an innovative platform that helps AI agents transcend being mere tools to become truly 'Accountable Team Members'.
+Samantha OS is an innovative platform that helps AI agents transcend being mere tools to become truly 'Accountable Team Members'.
 It enables anyone to easily create AI agents, imbue them with a 'Constitution' they must adhere to, and automatically establishes an operating system that includes transparent monitoring of all execution flows.
 
-No longer worry about the opaque decisions of AI. AgentLayer creates AI agents optimized for your business and endows all their actions with 'Responsibility and Rules'.
+No longer worry about the opaque decisions of AI. Samantha OS creates AI agents optimized for your business and endows all their actions with 'Responsibility and Rules'.
 
 🔥 Core Features
 🎨 Visual Workflow Builder (Frontend)
@@ -36,12 +37,12 @@ GET /api/execution/:id/logs: Streams real-time logs for a specific execution via
 
 POST /api/report: Saves constitution rule violation reports.
 
-Database (PostgreSQL, Drizzle ORM): Schemas for users, workflows, executions, logs, violation_reports, constitution_rules are defined, necessary for AgentLayer operations. Initially uses in-memory storage, with an easy migration path to actual PostgreSQL DBs like Supabase.
+Database (PostgreSQL, Drizzle ORM): Schemas for users, workflows, executions, logs, violation_reports, constitution_rules are defined, necessary for Samantha OS operations. Initially uses in-memory storage, with an easy migration path to actual PostgreSQL DBs like Supabase.
 
 LangGraph-style Execution Engine: Dynamically transforms the visually defined node and edge flows (JSON) from the frontend into a LangGraph-like executable pipeline structure on the backend to power the agents.
 
 🧠 MCP (Main Control Plane): The Agent's Brain and Command Center
-Acts as the central control node, coordinating and managing all AI Agent workflow executions within AgentLayer.
+Acts as the central control node, coordinating and managing all AI Agent workflow executions within Samantha OS.
 
 Oversees execution order, conditional branching, error handling, and iterative processing for complex agent logic.
 
@@ -96,8 +97,8 @@ Development Environment: Node.js, npm, Git, TypeScript
 Here's how to run this project locally or deploy it to GitHub.
 
 1. Clone the Project (from GitHub)
-git clone https://github.com/yourusername/no-code-agent-builder.git
-cd no-code-agent-builder
+git clone https://github.com/yourusername/samantha-os.git
+cd samantha-os
 
 Replace yourusername with your GitHub username.
 
@@ -129,15 +130,15 @@ npm run start
 5. GitHub Repository Setup
 This project is already prepared to be pushed to GitHub. After setting up the package.json and other files locally, follow these steps:
 
-Create a new repository on GitHub: Create an empty repository named no-code-agent-builder on GitHub. (Do not add a README, .gitignore, or License.)
+Create a new repository on GitHub: Create an empty repository named samantha-os on GitHub. (Do not add a README, .gitignore, or License.)
 
 Initialize and connect local Git: From your project's root folder, run the following commands:
 
 git init
 git add .
-git commit -m "Initial commit: AgentLayer No Code Builder project"
+git commit -m "Initial commit: Samantha OS Constitutional AI Platform"
 git branch -M main
-git remote add origin https://github.com/yourusername/no-code-agent-builder.git
+git remote add origin https://github.com/yourusername/samantha-os.git
 git push -u origin main
 
 Replace yourusername with your GitHub username.
@@ -147,7 +148,7 @@ Create/Log in to Vercel Account: Go to vercel.com and log in with your GitHub ac
 
 Import New Project: From the Vercel dashboard, select Add New... -> Project.
 
-Select GitHub Repository: Choose your no-code-agent-builder repository.
+Select GitHub Repository: Choose your samantha-os repository.
 
 Project Configuration:
 
@@ -182,4 +183,4 @@ npx drizzle-kit migrate # Apply migrations to the actual DB
 
 Modify server/storage.ts to implement actual DB integration using Drizzle ORM instead of in-memory storage.
 
-This project will be a powerful starting point for realizing the core vision of AgentLayer. Refer to the comments in each file to expand and refine its functionalities.
+This project will be a powerful starting point for realizing the core vision of Samantha OS. Refer to the comments in each file to expand and refine its functionalities.
