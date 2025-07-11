@@ -10,10 +10,9 @@ import {
   Vote,
   Shield,
   Menu,
-  X,
-  Wallet
+  X
 } from 'lucide-react';
-import WalletConnect from './WalletConnect';
+import AuthButton from './AuthButton';
 
 const GlobalNavigation: React.FC = () => {
   const location = useLocation();
@@ -70,9 +69,9 @@ const GlobalNavigation: React.FC = () => {
             })}
           </div>
 
-          {/* Wallet Connection */}
+          {/* Auth Button */}
           <div className="flex items-center space-x-4">
-            <WalletConnect />
+            <AuthButton />
             
             {/* Mobile menu button */}
             <Button

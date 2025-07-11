@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import WalletConnect from './WalletConnect';
+import AuthButton from './AuthButton';
 import AgentMarketplace from './AgentMarketplace';
 import DAORewards from './DAORewards';
 import { Store, Trophy, Bot } from 'lucide-react';
@@ -23,7 +23,7 @@ const WorkflowHeader: React.FC = () => {
               Constitutional AI Platform
             </span>
           </div>
-          <WalletConnect />
+          <AuthButton />
         </div>
       </header>
 
