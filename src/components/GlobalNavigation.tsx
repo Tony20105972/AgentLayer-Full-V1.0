@@ -1,129 +1,80 @@
+import reflex as rx
 
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Blocks, 
-  BarChart3, 
-  Store, 
-  Vote,
-  Shield,
-  Menu,
-  X,
-  Wallet
-} from 'lucide-react';
-import WalletConnect from './WalletConnect';
+# 아이콘 정의 (Lucide 대응 없음 → 단순 텍스트 처리)
+def nav_icon(label: str):
+    return rx.box(
+        rx.text(label[0], font_size="sm", color="white"),
+        bg="blue.600",
+        border_radius="lg",
+        width="2em",
+        height="2em",
+        align_items="center",
+        justify_content="center",
+        display="flex",
+    )
 
-const GlobalNavigation: React.FC = () => {
-  const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  const navigation = [
-    { name: 'Builder', href: '/builder', icon: Blocks, description: 'Visual Agent Builder' },
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3, description: 'Execution Monitor' },
-    { name: 'Marketplace', href: '/marketplace', icon: Store, description: 'Agent Store' },
-    { name: 'Constitution', href: '/constitution', icon: Shield, description: 'Rule Manager' },
-    { name: 'DAO', href: '/dao', icon: Vote, description: 'Governance' },
-  ];
+# 각 네비게이션 항목 정의
+NAV_ITEMS = [
+    {"name": "Builder", "href": "/builder", "desc": "Visual Agent Builder"},
+    {"name": "Dashboard", "href": "/dashboard", "desc": "Execution Monitor"},
+    {"name": "Marketplace", "href": "/marketplace", "desc": "Agent Store"},
+    {"name": "Constitution", "href": "/constitution", "desc": "Rule Manager"},
+    {"name": "DAO", "href": "/dao", "desc": "Governance"},
+]
 
-  const isActive = (href: string) => location.pathname === href;
 
-  return (
-    <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Blocks className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="text-xl font-bold text-gray-900">Samantha OS</div>
-              <div className="text-xs text-gray-500 -mt-1">Constitutional AI</div>
-            </div>
-          </Link>
+def global_navigation() -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            # 로고 부분
+            rx.link(
+                rx.hstack(
+                    nav_icon("S"),
+                    rx.vstack(
+                        rx.text("Samantha OS", font_weight="bold", font_size="lg"),
+                        rx.text("Constitutional AI", font_size="xs", color="gray.500"),
+                        spacing="0",
+                    )
+                ),
+                href="/",
+            ),
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${
-                    isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive(item.href) ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                  <span>{item.name}</span>
-                  {item.name === 'DAO' && (
-                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                      Beta
-                    </Badge>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+            # 데스크탑 네비게이션
+            rx.hstack(
+                *[
+                    rx.link(
+                        rx.hstack(
+                            rx.text(item["name"], font_size="sm"),
+                            rx.cond(
+                                item["name"] == "DAO",
+                                rx.badge("Beta", color_scheme="purple", size="xs")
+                            )
+                        ),
+                        href=item["href"],
+                        padding_x="2",
+                        padding_y="1",
+                        border_radius="md",
+                        _hover={"bg": "gray.100"},
+                    )
+                    for item in NAV_ITEMS
+                ],
+                spacing="2",
+                display=["none", "flex"],  # 모바일 숨김
+            ),
 
-          {/* Wallet Connection */}
-          <div className="flex items-center space-x-4">
-            <WalletConnect />
-            
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </div>
+            # 지갑 연결 (임시 버튼)
+            rx.button("Connect Wallet", variant="outline", size="sm"),
 
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4">
-            <div className="space-y-2">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive(item.href)
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}`} />
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span>{item.name}</span>
-                        {item.name === 'DAO' && (
-                          <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                            Beta
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">{item.description}</div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </nav>
-  );
-};
-
-export default GlobalNavigation;
+            spacing="4",
+            justify="space-between",
+            align="center",
+            width="100%",
+        ),
+        bg="whiteAlpha.800",
+        backdrop_filter="blur(10px)",
+        padding="2",
+        border_bottom="1px solid #e2e8f0",
+        position="sticky",
+        top="0",
+        z_index="50"
+    )
