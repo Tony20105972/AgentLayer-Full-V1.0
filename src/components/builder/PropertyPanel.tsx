@@ -27,18 +27,15 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
 
   const addRule = () => {
     if (!newRuleName.trim()) return;
-    
     const newRule = {
       rule_name: newRuleName,
       description: 'New rule description',
       violation_action: 'warn' as const
     };
-    
     onUpdateConstitution({
       ...constitution,
       rules: [...constitution.rules, newRule]
     });
-    
     setNewRuleName('');
   };
 
@@ -50,10 +47,9 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   };
 
   const updateRule = (index: number, field: string, value: string) => {
-    const updatedRules = constitution.rules.map((rule: any, i: number) => 
+    const updatedRules = constitution.rules.map((rule: any, i: number) =>
       i === index ? { ...rule, [field]: value } : rule
     );
-    
     onUpdateConstitution({
       ...constitution,
       rules: updatedRules
@@ -76,7 +72,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
 
         <TabsContent value="properties" className="flex-1 p-4 space-y-4">
           {selectedNode ? (
-            <NodePropertyEditor 
+            <NodePropertyEditor
               node={selectedNode}
               onUpdate={(updates) => onUpdateNode(selectedNode.id, updates)}
             />
@@ -93,7 +89,6 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
         <TabsContent value="constitution" className="flex-1 p-4 space-y-4">
           <div>
             <h3 className="font-semibold text-gray-900 mb-4">Constitution Rules</h3>
-            
             <div className="space-y-3 mb-4">
               {constitution.rules.map((rule: any, index: number) => (
                 <Card key={index} className="p-3">
@@ -131,7 +126,6 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                 </Card>
               ))}
             </div>
-
             <div className="flex space-x-2">
               <Input
                 placeholder="New rule name..."
@@ -158,8 +152,9 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
 
   const handleConfigUpdate = (field: string, value: any) => {
     onUpdate({
+      ...nodeData,
       config: {
-        ...config,
+        ...nodeData.config,
         [field]: value
       }
     });
@@ -171,15 +166,13 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
         <h3 className="font-semibold text-gray-900 mb-2">{String(nodeData.label)} Configuration</h3>
         <Badge variant="secondary">{node.type}</Badge>
       </div>
-
       <div>
         <label className="text-sm font-medium">Node Name</label>
         <Input
           value={String(nodeData.label)}
-          onChange={(e) => onUpdate({ label: e.target.value })}
+          onChange={(e) => onUpdate({ ...nodeData, label: e.target.value })}
         />
       </div>
-
       {node.type === 'node' && (
         <div className="space-y-3">
           <div>
@@ -204,7 +197,6 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           </div>
         </div>
       )}
-
       {node.type === 'state' && (
         <div>
           <label className="text-sm font-medium">Initial State (JSON)</label>
@@ -216,7 +208,6 @@ const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => voi
           />
         </div>
       )}
-
       {node.type === 'output' && (
         <div className="space-y-3">
           <div>
