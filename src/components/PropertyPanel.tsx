@@ -1,330 +1,279 @@
 
-import React, { useState, useEffect } from 'react';
-import { Node } from '@xyflow/react';
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Node } from '@xyflow/react';
+import { Settings, FileText, Plus, Trash2 } from 'lucide-react';
+import { NodeData, NodeConfig } from '@/types/flow';
 
 interface PropertyPanelProps {
   selectedNode: Node | null;
-  onUpdateNode: (nodeId: string, updates: Partial<Node>) => void;
+  onUpdateNode: (nodeId: string, updates: any) => void;
+  constitution: any;
+  onUpdateConstitution: (constitution: any) => void;
 }
 
-const PropertyPanel: React.FC<PropertyPanelProps> = ({ selectedNode, onUpdateNode }) => {
-  const [nodeLabel, setNodeLabel] = useState('');
-  const [nodeConfig, setNodeConfig] = useState<Record<string, any>>({});
-  const [activeTab, setActiveTab] = useState<'properties' | 'state' | 'execution' | 'rules'>('properties');
+const PropertyPanel: React.FC<PropertyPanelProps> = ({
+  selectedNode,
+  onUpdateNode,
+  constitution,
+  onUpdateConstitution
+}) => {
+  const [newRuleName, setNewRuleName] = useState('');
 
-  useEffect(() => {
-    if (selectedNode) {
-      setNodeLabel(typeof selectedNode.data.label === 'string' ? selectedNode.data.label : '');
-      setNodeConfig(selectedNode.data.config || {});
-    }
-  }, [selectedNode]);
-
-  const handleLabelChange = (value: string) => {
-    setNodeLabel(value);
-    if (selectedNode) {
-      onUpdateNode(selectedNode.id, {
-        data: { ...selectedNode.data, label: value }
-      });
-    }
+  const addRule = () => {
+    if (!newRuleName.trim()) return;
+    const newRule = {
+      rule_name: newRuleName,
+      description: 'New rule description',
+      violation_action: 'warn' as const
+    };
+    onUpdateConstitution({
+      ...constitution,
+      rules: [...constitution.rules, newRule]
+    });
+    setNewRuleName('');
   };
 
-  const handleConfigChange = (key: string, value: any) => {
-    const newConfig = { ...nodeConfig, [key]: value };
-    setNodeConfig(newConfig);
-    if (selectedNode) {
-      onUpdateNode(selectedNode.id, {
-        data: { ...selectedNode.data, config: newConfig }
-      });
-    }
+  const removeRule = (index: number) => {
+    onUpdateConstitution({
+      ...constitution,
+      rules: constitution.rules.filter((_: any, i: number) => i !== index)
+    });
   };
 
-  if (!selectedNode) {
-    return (
-      <div className="p-6 text-center">
-        <div className="text-gray-400 mb-4">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <span className="text-2xl">⚙️</span>
-          </div>
-        </div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">No Node Selected</h3>
-        <p className="text-xs text-gray-500">Click on a node to configure its settings</p>
-      </div>
+  const updateRule = (index: number, field: string, value: string) => {
+    const updatedRules = constitution.rules.map((rule: any, i: number) =>
+      i === index ? { ...rule, [field]: value } : rule
     );
+    onUpdateConstitution({
+      ...constitution,
+      rules: updatedRules
+    });
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'properties':
-        return renderPropertiesTab();
-      case 'state':
-        return renderStateTab();
-      case 'execution':
-        return renderExecutionTab();
-      case 'rules':
-        return renderRulesTab();
-      default:
-        return renderPropertiesTab();
-    }
+  return (
+    <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+      <Tabs defaultValue="properties" className="flex-1">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="properties" className="flex items-center space-x-2">
+            <Settings className="w-4 h-4" />
+            <span>Properties</span>
+          </TabsTrigger>
+          <TabsTrigger value="constitution" className="flex items-center space-x-2">
+            <FileText className="w-4 h-4" />
+            <span>Constitution</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="properties" className="flex-1 p-4 space-y-4">
+          {selectedNode ? (
+            <NodePropertyEditor
+              node={selectedNode}
+              onUpdate={(updates) => onUpdateNode(selectedNode.id, updates)}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="text-center">
+                <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Select a node to edit properties</p>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="constitution" className="flex-1 p-4 space-y-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-4">Constitution Rules</h3>
+            <div className="space-y-3 mb-4">
+              {constitution.rules.map((rule: any, index: number) => (
+                <Card key={index} className="p-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Input
+                        value={rule.rule_name}
+                        onChange={(e) => updateRule(index, 'rule_name', e.target.value)}
+                        className="font-medium"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeRule(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={rule.description}
+                      onChange={(e) => updateRule(index, 'description', e.target.value)}
+                      placeholder="Rule description..."
+                      rows={2}
+                    />
+                    <select
+                      value={rule.violation_action}
+                      onChange={(e) => updateRule(index, 'violation_action', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="block">Block</option>
+                      <option value="warn">Warn</option>
+                      <option value="log">Log</option>
+                    </select>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="New rule name..."
+                value={newRuleName}
+                onChange={(e) => setNewRuleName(e.target.value)}
+              />
+              <Button onClick={addRule}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+const NodePropertyEditor: React.FC<{ node: Node; onUpdate: (updates: any) => void }> = ({
+  node,
+  onUpdate
+}) => {
+  const nodeData = node.data as NodeData;
+  const config = nodeData.config || {} as NodeConfig;
+
+  const handleConfigUpdate = (field: string, value: any) => {
+    onUpdate({
+      ...nodeData,
+      config: {
+        ...nodeData.config,
+        [field]: value
+      }
+    });
   };
 
-  const renderPropertiesTab = () => (
+  return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="nodeLabel">Node Name</Label>
-        <Input 
-          id="nodeLabel"
-          value={nodeLabel}
-          onChange={(e) => handleLabelChange(e.target.value)}
-          placeholder="Enter node name..."
+      <div>
+        <h3 className="font-semibold text-gray-900 mb-2">{String(nodeData.label)} Configuration</h3>
+        <Badge variant="secondary">{node.type}</Badge>
+      </div>
+      <div>
+        <label className="text-sm font-medium">Node Name</label>
+        <Input
+          value={String(nodeData.label)}
+          onChange={(e) => onUpdate({ ...nodeData, label: e.target.value })}
         />
       </div>
-
-      {selectedNode.type === 'start' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="initialInput">Initial Input Schema</Label>
-            <textarea 
-              id="initialInput"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm font-mono"
+      {node.type === 'node' && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium">Prompt</label>
+            <Textarea
+              value={config.prompt || ''}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    prompt: e.target.value
+                  }
+                }))
+              }
               rows={4}
-              value={nodeConfig.initialInput || '{}'}
-              onChange={(e) => handleConfigChange('initialInput', e.target.value)}
-              placeholder='{"message": "string", "user_id": "string"}'
             />
           </div>
-        </>
-      )}
-
-      {selectedNode.type === 'agent' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="role">Agent Role</Label>
-            <Input 
-              id="role"
-              value={nodeConfig.role || ''}
-              onChange={(e) => handleConfigChange('role', e.target.value)}
-              placeholder="e.g., Customer Support Specialist"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <textarea 
-              id="description"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              rows={3}
-              value={nodeConfig.description || ''}
-              onChange={(e) => handleConfigChange('description', e.target.value)}
-              placeholder="Describe the agent's capabilities and responsibilities"
-            />
-          </div>
-        </>
-      )}
-
-      {selectedNode.type === 'notifier' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="notifierType">Notification Type</Label>
-            <select 
-              id="notifierType"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              value={nodeConfig.type || 'webhook'}
-              onChange={(e) => handleConfigChange('type', e.target.value)}
-            >
-              <option value="slack">Slack</option>
-              <option value="discord">Discord</option>
-              <option value="telegram">Telegram</option>
-              <option value="webhook">Webhook</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="webhookUrl">Webhook URL</Label>
-            <Input 
-              id="webhookUrl"
-              value={nodeConfig.webhookUrl || ''}
-              onChange={(e) => handleConfigChange('webhookUrl', e.target.value)}
-              placeholder="https://hooks.slack.com/..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="channel">Channel/Target</Label>
-            <Input 
-              id="channel"
-              value={nodeConfig.channel || ''}
-              onChange={(e) => handleConfigChange('channel', e.target.value)}
-              placeholder="e.g., #alerts, @username"
-            />
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  const renderStateTab = () => (
-    <div className="space-y-4">
-      <h4 className="text-sm font-medium text-gray-900">Expected Input/Output</h4>
-      <div className="space-y-3">
-        <div>
-          <Label>Input Schema</Label>
-          <pre className="text-xs bg-gray-100 p-3 rounded border overflow-x-auto font-mono">
-            {JSON.stringify(getExpectedInput(selectedNode.type), null, 2)}
-          </pre>
-        </div>
-        <div>
-          <Label>Output Schema</Label>
-          <pre className="text-xs bg-gray-100 p-3 rounded border overflow-x-auto font-mono">
-            {JSON.stringify(getExpectedOutput(selectedNode.type), null, 2)}
-          </pre>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderExecutionTab = () => (
-    <div className="space-y-4">
-      {selectedNode.type === 'agent' && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="model">AI Model</Label>
-            <select 
-              id="model"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              value={nodeConfig.model || 'gpt-4'}
-              onChange={(e) => handleConfigChange('model', e.target.value)}
+          <div>
+            <label className="text-sm font-medium">Model</label>
+            <select
+              value={config.model || 'gpt-4'}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    model: e.target.value
+                  }
+                }))
+              }
+              className="w-full p-2 border rounded"
             >
               <option value="gpt-4">GPT-4</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
               <option value="claude-3">Claude 3</option>
-              <option value="gemini-pro">Gemini Pro</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="systemPrompt">System Prompt</Label>
-            <textarea 
-              id="systemPrompt"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              rows={6}
-              value={nodeConfig.systemPrompt || ''}
-              onChange={(e) => handleConfigChange('systemPrompt', e.target.value)}
-              placeholder="You are a helpful AI assistant..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="temperature">Temperature</Label>
-            <Input 
-              id="temperature"
-              type="number"
-              min="0"
-              max="2"
-              step="0.1"
-              value={nodeConfig.temperature || 0.7}
-              onChange={(e) => handleConfigChange('temperature', parseFloat(e.target.value))}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input 
-                type="checkbox" 
-                checked={nodeConfig.toolsEnabled || false}
-                onChange={(e) => handleConfigChange('toolsEnabled', e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm text-gray-700">Enable Tools</span>
-            </label>
-          </div>
-        </>
+        </div>
       )}
-    </div>
-  );
-
-  const renderRulesTab = () => (
-    <div className="space-y-4">
-      <h4 className="text-sm font-medium text-gray-900">Constitutional Rules</h4>
-      <div className="space-y-2">
-        <div className="text-sm text-gray-600">
-          Rules are enforced by the RuleChecker node in the workflow.
+      {node.type === 'state' && (
+        <div>
+          <label className="text-sm font-medium">Initial State (JSON)</label>
+          <Textarea
+            value={config.initialState || '{}'}
+            onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    initialState: e.target.value
+                  }
+                }))
+              }
+            rows={6}
+            className="font-mono text-sm"
+          />
         </div>
-        <div className="bg-yellow-50 p-3 rounded-lg">
-          <div className="text-sm text-yellow-800">
-            🛡️ All nodes are subject to constitutional monitoring
+      )}
+      {node.type === 'output' && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium">Destination</label>
+            <select
+              value={config.destination || 'webhook'}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    destination: e.target.value
+                  }
+                }))
+              }
+              className="w-full p-2 border rounded"
+            >
+              <option value="webhook">Webhook</option>
+              <option value="slack">Slack</option>
+              <option value="file">File</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Template</label>
+            <Textarea
+              value={config.template || ''}
+              onChange={(e) =>
+                onUpdate((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    template: e.target.value
+                  }
+                }))
+              }
+              placeholder="Result: {{result}}"
+              rows={3}
+            />
           </div>
         </div>
-      </div>
-    </div>
-  );
-
-  const getExpectedInput = (nodeType: string) => {
-    switch (nodeType) {
-      case 'start':
-        return { message: 'string', user_id: 'string', context: 'object' };
-      case 'agent':
-        return { prompt: 'string', context: 'object', user_input: 'string' };
-      case 'router':
-        return { decision_data: 'object', conditions: 'array' };
-      case 'ruleChecker':
-        return { content: 'string', metadata: 'object' };
-      case 'notifier':
-        return { message: 'string', metadata: 'object', urgency: 'string' };
-      default:
-        return {};
-    }
-  };
-
-  const getExpectedOutput = (nodeType: string) => {
-    switch (nodeType) {
-      case 'start':
-        return { processed_input: 'object', session_id: 'string' };
-      case 'agent':
-        return { response: 'string', confidence: 'number', tools_used: 'array' };
-      case 'router':
-        return { selected_path: 'string', reason: 'string' };
-      case 'ruleChecker':
-        return { violations: 'array', passed: 'boolean', score: 'number' };
-      case 'notifier':
-        return { sent: 'boolean', delivery_id: 'string', timestamp: 'string' };
-      default:
-        return {};
-    }
-  };
-
-  return (
-    <div className="p-4 h-full flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Node Configuration</h3>
-        <div className="bg-gray-50 p-3 rounded-lg">
-          <div className="text-sm text-gray-600">Type: <span className="font-medium">{selectedNode.type}</span></div>
-          <div className="text-sm text-gray-600">ID: <span className="font-mono text-xs">{selectedNode.id}</span></div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-4">
-        {[
-          { key: 'properties', label: 'Properties', icon: '⚙️' },
-          { key: 'state', label: 'State', icon: '📊' },
-          { key: 'execution', label: 'Execution', icon: '🔄' },
-          { key: 'rules', label: 'Rules', icon: '🛡️' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${
-              activeTab === tab.key
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <span className="mr-1">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        {renderTabContent()}
-      </div>
+      )}
     </div>
   );
 };
