@@ -162,10 +162,10 @@ const BuilderContent: React.FC = () => {
         };
       case 'llm':
         return {
-          label: 'Email Summarizer',
+          label: 'LLM',
           config: {
             prompt:
-              'You are a helpful AI assistant. Summarize the email and identify key action items. Be concise and highlight urgent matters.',
+              '',
             temperature: 0.7,
             model: 'gpt-4',
             inputVars: ['user_input'],
@@ -174,30 +174,30 @@ const BuilderContent: React.FC = () => {
         };
       case 'router':
         return {
-          label: 'Priority Router',
+          label: 'Router',
           config: {
             conditions:
-              'If ai_response contains "urgent" → priority_handler\nIf ai_response contains "question" → question_handler\nOtherwise → standard_handler',
-            inputVars: ['ai_response'],
-            outputVars: ['route_decision'],
+              '',
+            inputVars: [''],
+            outputVars: [''],
           },
         };
       case 'ruleChecker':
         return {
-          label: 'Safety Guardian',
+          label: 'ruleChecker',
           config: {
-            ruleSetName: 'default_constitution',
-            inputVars: ['ai_response'],
-            outputVars: ['safety_check'],
+            ruleSetName: '',
+            inputVars: [''],
+            outputVars: [''],
           },
         };
       case 'output':
         return {
-          label: 'Send to Slack',
+          label: 'Output',
           config: {
-            outputType: 'slack',
+            outputType: '',
             targetUrl: '',
-            template: '🤖 AI Response: {{ai_response}}\n\nStatus: {{safety_check}}',
+            template: '',
             sendVars: ['ai_response', 'safety_check'],
           },
         };
