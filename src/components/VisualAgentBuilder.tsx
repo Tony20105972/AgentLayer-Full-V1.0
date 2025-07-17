@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   ReactFlow,
   addEdge,
@@ -22,7 +22,6 @@ import ExecutionIndicator from './builder/ExecutionIndicator';
 import { nodeTypes } from './builder/nodeTypes';
 import { NodeData } from '@/types/flow';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
 
 const VisualAgentBuilder: React.FC = () => {
   return (
@@ -42,49 +41,57 @@ const BuilderContent: React.FC = () => {
   const [apiKeysSaved, setApiKeysSaved] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const { toast } = useToast();
+
   const reactFlowInstance = useReactFlow();
 
-  useEffect(() => {
-    loadFlow();
-  }, []);
+  const onConnect = useCallback(
+    (params: Connection) => {
+      const newEdge = {
+        ...params,
+        id: `e${params.source}-${params.target}`,
+        type: 'smoothstep',
+        style: { strokeWidth: 2, stroke: '#6366f1' },
+        animated: true,
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
 
-  const saveFlow = async () => {
-    const user = await supabase.auth.getUser();
-    if (!user.data.user) {
-      toast({ title: '로그인 필요', description: '저장하려면 로그인해야 합니다.' });
-      return;
-    }
+      toast({
+        title: 'Blocks Connected',
+        description: 'Your flow connection has been created successfully.',
+      });
+    },
+    [setEdges, toast]
+  );
 
-    const flow = { nodes, edges };
-    const { error } = await supabase.from('agent_configs').upsert([
-      {
-        user_id: user.data.user.id,
-        flow,
-        updated_at: new Date().toISOString()
-      }
-    ], { onConflict: ['user_id'] });
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      setSelectedNode(node);
+      toast({
+        title: `${node.type?.toUpperCase()} Block Selected`,
+        description: 'Edit settings in the right panel',
+      });
+    },
+    [toast]
+  );
 
-    if (error) {
-      toast({ title: '❌ 저장 실패', description: error.message });
-    } else {
-      toast({ title: '✅ 저장 완료', description: 'Agent 구성이 저장되었습니다.' });
-    }
+  const updateNodeData = (newData: NodeData) => {
+    if (!selectedNode) return;
+    setNodes((nds) =>
+      nds.map((n) => (n.id === selectedNode.id ? { ...n, data: newData } : n))
+    );
   };
 
-  const loadFlow = async () => {
-    const user = await supabase.auth.getUser();
-    if (!user.data.user) return;
+  const saveFlow = () => {
+    const flow = { nodes, edges };
+    localStorage.setItem('agentFlow', JSON.stringify(flow));
+  };
 
-    const { data, error } = await supabase
-      .from('agent_configs')
-      .select('*')
-      .eq('user_id', user.data.user.id)
-      .single();
-
-    if (data?.flow) {
-      setNodes(data.flow.nodes || []);
-      setEdges(data.flow.edges || []);
-      toast({ title: '✅ 불러오기 완료', description: '이전 구성 불러왔습니다.' });
+  const loadFlow = () => {
+    const saved = localStorage.getItem('agentFlow');
+    if (saved) {
+      const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
+      setNodes(savedNodes);
+      setEdges(savedEdges);
     }
   };
 
@@ -208,6 +215,16 @@ const BuilderContent: React.FC = () => {
       });
       return;
     }
+
+    if (!reactFlowInstance || !reactFlowInstance.screenToFlowPosition) return;
+
+    // The original code had an "event" here that was undefined.
+    // Assuming this block was intended for some positioning logic during execution,
+    // but without a clear source for "event", it's commented out to prevent errors.
+    // const position = reactFlowInstance.screenToFlowPosition({
+    //   x: event.clientX - reactFlowBounds.left,
+    //   y: event.clientY - reactFlowBounds.top,
+    // });
 
     setIsExecuting(true);
     const sortedNodes = [...nodes].sort((a, b) => a.position.x - b.position.x);
@@ -353,13 +370,15 @@ const BuilderContent: React.FC = () => {
       description: 'Your block has been optimized with AI suggestions.',
     });
   };
-
   return (
     <div className="h-screen bg-gray-50 flex">
+      {/* Left Sidebar - Node Library - ALWAYS VISIBLE */}
       <div className="flex-shrink-0">
         <NodeLibrary />
       </div>
+
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Toolbar */}
         <BuilderToolbar
           onExecute={executeFlow}
           onReplay={replayFlow}
@@ -370,8 +389,11 @@ const BuilderContent: React.FC = () => {
           onDeleteNode={deleteSelectedNode}
           hasSelectedNode={!!selectedNode}
         />
+
+        {/* Main Canvas */}
         <div className="flex-1 flex min-h-0">
           <div className="flex-1 relative" ref={reactFlowWrapper}>
+            {/* Save/Load buttons - moved here for better context if they are indeed part of the canvas controls */}
             <div className="absolute top-4 right-4 z-10 flex gap-2">
               <button onClick={saveFlow} className="bg-blue-500 text-white px-4 py-1 rounded">
                 Save
@@ -391,32 +413,23 @@ const BuilderContent: React.FC = () => {
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
-              onConnect={(params) => {
-                const newEdge = {
-                  ...params,
-                  id: `e${params.source}-${params.target}`,
-                  type: 'smoothstep',
-                  style: { strokeWidth: 2, stroke: '#6366f1' },
-                  animated: true,
-                };
-                setEdges((eds) => addEdge(newEdge, eds));
-              }}
-              onNodeClick={(e, node) => {
-                setSelectedNode(node);
-              }}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
               onPaneClick={onPaneClick}
               onDrop={onDrop}
               onDragOver={onDragOver}
               nodeTypes={nodeTypes}
               fitView
               className="bg-white"
-              snapToGrid
+              snapToGrid={true}
               snapGrid={[20, 20]}
             >
               <Controls className="bg-white shadow-lg border rounded-lg" />
               <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
             </ReactFlow>
           </div>
+
+          {/* Right Panel - Properties - ALWAYS VISIBLE */}
           <div className="flex-shrink-0">
             <LangGraphPropertiesPanel
               selectedNode={selectedNode}
@@ -427,18 +440,17 @@ const BuilderContent: React.FC = () => {
               }}
               onOptimizeWithAI={optimizeNodeWithAI}
               nodes={nodes}
-              onChange={(data) => {
-                if (selectedNode) {
-                  setNodes((nds) =>
-                    nds.map((n) =>
-                      n.id === selectedNode.id ? { ...n, data: data } : n
-                    )
-                  );
-                }
-              }}
+              // The original code had two LangGraphPropertiesPanel components.
+              // Assuming the second one was redundant or intended for a different purpose,
+              // and the 'onChange' prop for updateNodeData was meant for the main one.
+              // If 'onChange' is indeed needed on a separate panel, it should be re-added
+              // with its distinct purpose. For now, integrated into the primary panel.
+              onChange={updateNodeData}
             />
           </div>
         </div>
+
+        {/* Execution Indicator */}
         <ExecutionIndicator
           isExecuting={isExecuting}
           isReplaying={isReplaying}

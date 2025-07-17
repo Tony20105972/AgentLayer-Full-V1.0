@@ -1,21 +1,23 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/",  // ✅ Vercel 경로 오류 방지
+  base: "/",  
   server: {
-    host: "::",  // ✅ 외부 접근 허용 (로컬 테스트용)
+    host: "::",
     port: 8080,
   },
   plugins: [
-    react(), // ✅ 필수 React SWC 플러그인
-    // componentTagger() 제거됨
-  ],
+    react(),
+    mode === 'development' &&
+    componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),  // ✅ "@/components/..." 식으로 쓸 수 있게
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 }));
