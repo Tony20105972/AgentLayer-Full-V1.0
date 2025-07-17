@@ -1,465 +1,459 @@
-import React, { useState, useCallback, useRef } from 'react';
-import {
-  ReactFlow,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  Controls,
-  Background,
-  BackgroundVariant,
-  Connection,
-  Edge,
-  Node,
-  ReactFlowProvider,
-  useReactFlow,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 
-import NodeLibrary from './builder/NodeLibrary';
-import BuilderToolbar from './builder/BuilderToolbar';
-import LangGraphPropertiesPanel from './builder/LangGraphPropertiesPanel';
-import ExecutionIndicator from './builder/ExecutionIndicator';
-import { nodeTypes } from './builder/nodeTypes';
-import { NodeData } from '@/types/flow';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Sparkles, Download, Upload, Play, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useEffect } from 'react';
 
-const VisualAgentBuilder: React.FC = () => {
-  return (
-    <ReactFlowProvider>
-      <BuilderContent />
-    </ReactFlowProvider>
-  );
-};
+interface Block {
+  id: string;
+  type: 'state' | 'node' | 'router' | 'ruleChecker' | 'output';
+  name: string;
+  config: any;
+  position: number;
+}
 
-const BuilderContent: React.FC = () => {
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
-  const [apiKeysSaved, setApiKeysSaved] = useState(false);
-  const [isReplaying, setIsReplaying] = useState(false);
+const AgentBuilder: React.FC = () => {
   const { toast } = useToast();
 
-  const reactFlowInstance = useReactFlow();
+  const saveFlow = async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) return toast({ title: "로그인 필요", description: "저장하려면 로그인해야 합니다." });
 
-  const onConnect = useCallback(
-    (params: Connection) => {
-      const newEdge = {
-        ...params,
-        id: `e${params.source}-${params.target}`,
-        type: 'smoothstep',
-        style: { strokeWidth: 2, stroke: '#6366f1' },
-        animated: true,
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
+    const flow = { blocks };
+    const { error } = await supabase.from("agent_configs").upsert([
+      { user_id: user.data.user.id, flow, updated_at: new Date().toISOString() }
+    ], { onConflict: ["user_id"] });
 
-      toast({
-        title: 'Blocks Connected',
-        description: 'Your flow connection has been created successfully.',
-      });
-    },
-    [setEdges, toast]
-  );
-
-  const onNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      setSelectedNode(node);
-      toast({
-        title: `${node.type?.toUpperCase()} Block Selected`,
-        description: 'Edit settings in the right panel',
-      });
-    },
-    [toast]
-  );
-
-  const updateNodeData = (newData: NodeData) => {
-    if (!selectedNode) return;
-    setNodes((nds) =>
-      nds.map((n) => (n.id === selectedNode.id ? { ...n, data: newData } : n))
-    );
+    if (error) toast({ title: "❌ 저장 실패", description: error.message });
+    else toast({ title: "✅ 저장 완료", description: "Agent가 저장되었습니다." });
   };
 
-  const saveFlow = () => {
-    const flow = { nodes, edges };
-    localStorage.setItem('agentFlow', JSON.stringify(flow));
-  };
 
-  const loadFlow = () => {
-    const saved = localStorage.getItem('agentFlow');
-    if (saved) {
-      const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
-      setNodes(savedNodes);
-      setEdges(savedEdges);
+  const loadFlow = async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) return;
+
+    const { data } = await supabase.from("agent_configs").select("*").eq("user_id", user.data.user.id).single();
+    if (data?.flow?.blocks) {
+      setBlocks(data.flow.blocks);
+      toast({ title: "✅ 불러오기 성공", description: "이전 구성을 불러왔습니다." });
     }
   };
 
-  const onPaneClick = useCallback(() => {
-    setSelectedNode(null);
-  }, []);
+  useEffect(() => { loadFlow(); }, []);
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [crewMode, setCrewMode] = useState(false);
+  const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executingBlockId, setExecutingBlockId] = useState<string | null>(null);
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-
-      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
-      const type = event.dataTransfer.getData('application/reactflow');
-
-      if (typeof type === 'undefined' || !type || !reactFlowBounds) {
-        return;
-      }
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
-
-      const newNode: Node = {
-        id: `${type}-${Date.now()}`,
-        type,
-        position,
-        data: getDefaultNodeData(type),
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-      setSelectedNode(newNode);
-
-      toast({
-        title: 'Block Added',
-        description: `${getBlockDisplayName(type)} has been added to your flow.`,
-      });
-    },
-    [reactFlowInstance, setNodes, toast]
-  );
-
-  const getBlockDisplayName = (type: string): string => {
-    const names = {
-      state: 'State Manager',
-      llm: 'AI Agent Node',
-      router: 'Decision Router',
-      ruleChecker: 'Constitution Checker',
-      output: 'Output Handler',
+  const addBlock = (type: Block['type']) => {
+    const newBlock: Block = {
+      id: `${type}-${Date.now()}`,
+      type,
+      name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${blocks.filter(b => b.type === type).length + 1}`,
+      config: getDefaultConfig(type),
+      position: blocks.length
     };
-    return names[type as keyof typeof names] || type;
+    setBlocks([...blocks, newBlock]);
   };
 
-  const getDefaultNodeData = (type: string): NodeData => {
+  const getDefaultConfig = (type: Block['type']) => {
     switch (type) {
       case 'state':
-        return {
-          label: 'My Data Hub',
-          config: {
-            initialState: '{\n  "user_input": "",\n  "context": {}\n}',
-            inputVars: ['user_input'],
-            outputVars: ['processed_data'],
-          },
-        };
-      case 'llm':
-        return {
-          label: 'Email Summarizer',
-          config: {
-            prompt:
-              'You are a helpful AI assistant. Summarize the email and identify key action items. Be concise and highlight urgent matters.',
-            temperature: 0.7,
-            model: 'gpt-4',
-            inputVars: ['user_input'],
-            outputVars: ['ai_response'],
-          },
+        return { initialState: '{\n  "message": "",\n  "context": {}\n}' };
+      case 'node':
+        return { 
+          prompt: 'You are a helpful AI assistant. Process the input and provide a response.',
+          inputs: [],
+          outputs: ['result'],
+          aiModel: 'gpt-4'
         };
       case 'router':
-        return {
-          label: 'Priority Router',
-          config: {
-            conditions:
-              'If ai_response contains "urgent" → priority_handler\nIf ai_response contains "question" → question_handler\nOtherwise → standard_handler',
-            inputVars: ['ai_response'],
-            outputVars: ['route_decision'],
-          },
+        return { 
+          conditions: [
+            { name: 'condition1', expression: 'true', description: 'Default condition' }
+          ]
         };
       case 'ruleChecker':
-        return {
-          label: 'Safety Guardian',
-          config: {
-            ruleSetName: 'default_constitution',
-            inputVars: ['ai_response'],
-            outputVars: ['safety_check'],
-          },
+        return { 
+          rules: [
+            { rule_name: 'no_harmful_content', description: 'Prevent harmful or inappropriate content', violation_action: 'block' }
+          ]
         };
       case 'output':
-        return {
-          label: 'Send to Slack',
-          config: {
-            outputType: 'slack',
-            targetUrl: '',
-            template: '🤖 AI Response: {{ai_response}}\n\nStatus: {{safety_check}}',
-            sendVars: ['ai_response', 'safety_check'],
-          },
+        return { 
+          destination: 'webhook',
+          template: 'Result: {{result}}',
+          config: { url: '' }
         };
       default:
-        return { label: 'New Block' };
+        return {};
     }
   };
 
-  const executeFlow = async () => {
-    if (nodes.length === 0) {
+  const updateBlock = (id: string, updates: Partial<Block>) => {
+    setBlocks(blocks.map(block => 
+      block.id === id ? { ...block, ...updates } : block
+    ));
+  };
+
+  const deleteBlock = (id: string) => {
+    setBlocks(blocks.filter(block => block.id !== id));
+  };
+
+  const generateFromNaturalLanguage = async () => {
+    if (!naturalLanguageInput.trim()) return;
+    
+    setIsGenerating(true);
+    try {
+      // Simulate AI generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate basic flow based on input
+      const generatedBlocks: Block[] = [
+        {
+          id: 'state-1',
+          type: 'state',
+          name: 'Initial State',
+          config: { initialState: '{\n  "input_text": "",\n  "user_id": ""\n}' },
+          position: 0
+        },
+        {
+          id: 'node-1',
+          type: 'node',
+          name: 'Process Input',
+          config: {
+            prompt: `Process the following input: {{input_text}}. Provide a helpful response.`,
+            inputs: ['input_text'],
+            outputs: ['processed_result'],
+            aiModel: 'gpt-4'
+          },
+          position: 1
+        },
+        {
+          id: 'ruleChecker-1',
+          type: 'ruleChecker',
+          name: 'Rule Checker',
+          config: {
+            rules: [
+              { rule_name: 'no_harmful_content', description: 'Prevent harmful content', violation_action: 'block' },
+              { rule_name: 'factual_accuracy', description: 'Ensure factual accuracy', violation_action: 'warn' }
+            ]
+          },
+          position: 2
+        },
+        {
+          id: 'output-1',
+          type: 'output',
+          name: 'Final Output',
+          config: {
+            destination: 'webhook',
+            template: 'Result: {{processed_result}}',
+            config: { url: '' }
+          },
+          position: 3
+        }
+      ];
+      
+      setBlocks(generatedBlocks);
       toast({
-        title: 'No Flow to Run',
-        description: 'Add some blocks to your flow first.',
-        variant: 'destructive',
+        title: "Workflow Generated",
+        description: "Successfully generated workflow from natural language description."
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate workflow. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const executeWorkflow = async () => {
+    if (blocks.length === 0) {
+      toast({
+        title: "No Workflow",
+        description: "Please add blocks to your workflow before executing.",
+        variant: "destructive"
       });
       return;
     }
 
-    if (!reactFlowInstance || !reactFlowInstance.screenToFlowPosition) return;
-
-    // The original code had an "event" here that was undefined.
-    // Assuming this block was intended for some positioning logic during execution,
-    // but without a clear source for "event", it's commented out to prevent errors.
-    // const position = reactFlowInstance.screenToFlowPosition({
-    //   x: event.clientX - reactFlowBounds.left,
-    //   y: event.clientY - reactFlowBounds.top,
-    // });
-
     setIsExecuting(true);
-    const sortedNodes = [...nodes].sort((a, b) => a.position.x - b.position.x);
-
-    toast({
-      title: 'Flow Execution Started',
-      description: 'Your AI agent flow is now running...',
-    });
-
-    for (const node of sortedNodes) {
-      setExecutingNodeId(node.id);
-
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === node.id
-            ? { ...n, data: { ...n.data, isExecuting: true } }
-            : { ...n, data: { ...n.data, isExecuting: false } }
-        )
-      );
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      if (node.type === 'ruleChecker' && Math.random() > 0.7) {
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === node.id
-              ? { ...n, data: { ...n.data, hasViolation: true, isExecuting: false } }
-              : n
-          )
-        );
-
-        setEdges((eds) =>
-          eds.map((e) =>
-            e.source === node.id || e.target === node.id
-              ? { ...e, style: { ...e.style, stroke: '#ef4444', strokeWidth: 3 } }
-              : e
-          )
-        );
-
-        toast({
-          title: 'Constitution Violation Detected',
-          description: `Safety issue found in ${node.data.label}`,
-          variant: 'destructive',
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      } else {
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === node.id
-              ? { ...n, data: { ...n.data, isExecuting: false } }
-              : n
-          )
-        );
-      }
-    }
-
-    setIsExecuting(false);
-    setExecutingNodeId(null);
-
-    toast({
-      title: 'Flow Completed',
-      description: 'Your AI agent flow has finished executing.',
-    });
-  };
-
-  const replayFlow = async () => {
-    setIsReplaying(true);
-
-    toast({
-      title: 'Replaying Flow',
-      description: 'Resetting and re-running your flow...',
-    });
-
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        data: { ...n.data, hasViolation: false, isExecuting: false },
-      }))
-    );
-    setEdges((eds) =>
-      eds.map((e) => ({
-        ...e,
-        style: { strokeWidth: 2, stroke: '#6366f1' },
-      }))
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await executeFlow();
-    setIsReplaying(false);
-  };
-
-  const deleteSelectedNode = () => {
-    if (selectedNode) {
-      setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
-      setEdges((eds) =>
-        eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id)
-      );
-
-      toast({
-        title: 'Block Deleted',
-        description: `${selectedNode.data.label} has been removed from your flow.`,
-      });
-
-      setSelectedNode(null);
-    }
-  };
-
-  const saveApiKeys = () => {
-    setApiKeysSaved(true);
-    toast({
-      title: 'API Keys Saved',
-      description: 'Your API configuration has been saved successfully.',
-    });
-    setTimeout(() => setApiKeysSaved(false), 3000);
-  };
-
-  const optimizeNodeWithAI = (nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.id === nodeId && n.type === 'llm') {
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              config: {
-                ...n.data.config,
-                prompt: `[AI Optimized] ${n.data.config?.prompt || ''}`,
-                temperature: 0.8,
-              },
-            },
-          };
+    try {
+      // Simulate execution with visual feedback
+      for (const block of blocks.sort((a, b) => a.position - b.position)) {
+        setExecutingBlockId(block.id);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Simulate rule checker violations
+        if (block.type === 'ruleChecker' && Math.random() > 0.8) {
+          toast({
+            title: "Rule Violation Detected",
+            description: `${block.name} found a potential violation.`,
+            variant: "destructive"
+          });
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-        return n;
-      })
-    );
-
-    toast({
-      title: 'AI Optimization Applied',
-      description: 'Your block has been optimized with AI suggestions.',
-    });
+      }
+      
+      toast({
+        title: "Execution Complete",
+        description: "Workflow executed successfully!"
+      });
+    } catch (error) {
+      toast({
+        title: "Execution Failed",
+        description: "Workflow execution encountered an error.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecuting(false);
+      setExecutingBlockId(null);
+    }
   };
+
+  const exportWorkflow = () => {
+    const workflowData = {
+      blocks,
+      crewMode,
+      metadata: {
+        created: new Date().toISOString(),
+        version: '1.0'
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'agent-workflow.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="h-screen bg-gray-50 flex">
-      {/* Left Sidebar - Node Library - ALWAYS VISIBLE */}
-      <div className="flex-shrink-0">
-        <NodeLibrary />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="backdrop-blur-xl bg-white/5 min-h-screen">
+        <div className="container mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">Agent Builder</h1>
+            <p className="text-slate-300">Create constitutional AI workflows with visual blocks</p>
+          </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Toolbar */}
-        <BuilderToolbar
-          onExecute={executeFlow}
-          onReplay={replayFlow}
-          isExecuting={isExecuting}
-          isReplaying={isReplaying}
-          onSaveApiKeys={saveApiKeys}
-          apiKeysSaved={apiKeysSaved}
-          onDeleteNode={deleteSelectedNode}
-          hasSelectedNode={!!selectedNode}
-        />
+          {/* Natural Language Input */}
+          <Card className="mb-8 bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Describe Your Agent
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={naturalLanguageInput}
+                onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                placeholder="Build an agent that translates text, checks ethical rules, and sends to Discord..."
+                className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                rows={3}
+              />
+              <Button 
+                onClick={generateFromNaturalLanguage}
+                disabled={isGenerating || !naturalLanguageInput.trim()}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                {isGenerating ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                Generate Workflow
+              </Button>
+            </CardContent>
+          </Card>
 
-        {/* Main Canvas */}
-        <div className="flex-1 flex min-h-0">
-          <div className="flex-1 relative" ref={reactFlowWrapper}>
-            {/* Save/Load buttons - moved here for better context if they are indeed part of the canvas controls */}
-            <div className="absolute top-4 right-4 z-10 flex gap-2">
-              <button onClick={saveFlow} className="bg-blue-500 text-white px-4 py-1 rounded">
-                Save
-              </button>
-              <button onClick={loadFlow} className="bg-gray-500 text-white px-4 py-1 rounded">
-                Load
-              </button>
+          {/* Controls */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="crew-mode"
+                  checked={crewMode}
+                  onCheckedChange={setCrewMode}
+                />
+                <Label htmlFor="crew-mode" className="text-white">Crew AI Mode</Label>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={executeWorkflow}
+                  disabled={isExecuting || blocks.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Execute
+                </Button>
+                <Button 
+                  onClick={exportWorkflow}
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
             </div>
-            <ReactFlow
-              nodes={nodes.map((node) => ({
-                ...node,
-                data: {
-                  ...node.data,
-                  isExecuting: executingNodeId === node.id,
-                },
-              }))}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              nodeTypes={nodeTypes}
-              fitView
-              className="bg-white"
-              snapToGrid={true}
-              snapGrid={[20, 20]}
-            >
-              <Controls className="bg-white shadow-lg border rounded-lg" />
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
-            </ReactFlow>
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => addBlock('state')}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                State
+              </Button>
+              <Button 
+                onClick={() => addBlock('node')}
+                size="sm"
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {crewMode ? 'Role/Task' : 'Node'}
+              </Button>
+              <Button 
+                onClick={() => addBlock('router')}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Router
+              </Button>
+              <Button 
+                onClick={() => addBlock('ruleChecker')}
+                size="sm"
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Rules
+              </Button>
+              <Button 
+                onClick={() => addBlock('output')}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Output
+              </Button>
+            </div>
           </div>
 
-          {/* Right Panel - Properties - ALWAYS VISIBLE */}
-          <div className="flex-shrink-0">
-            <LangGraphPropertiesPanel
-              selectedNode={selectedNode}
-              onUpdateNode={(nodeId, updates) => {
-                setNodes((nds) =>
-                  nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n))
-                );
-              }}
-              onOptimizeWithAI={optimizeNodeWithAI}
-              nodes={nodes}
-              // The original code had two LangGraphPropertiesPanel components.
-              // Assuming the second one was redundant or intended for a different purpose,
-              // and the 'onChange' prop for updateNodeData was meant for the main one.
-              // If 'onChange' is indeed needed on a separate panel, it should be re-added
-              // with its distinct purpose. For now, integrated into the primary panel.
-              onChange={updateNodeData}
-            />
+          {/* Workflow Blocks */}
+          <div className="space-y-6">
+            {blocks
+              .sort((a, b) => a.position - b.position)
+              .map((block) => (
+                <BlockEditor
+                  key={block.id}
+                  block={block}
+                  crewMode={crewMode}
+                  isExecuting={executingBlockId === block.id}
+                  onUpdate={(updates) => updateBlock(block.id, updates)}
+                  onDelete={() => deleteBlock(block.id)}
+                />
+              ))}
           </div>
+
+          {blocks.length === 0 && (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">🤖</div>
+              <h3 className="text-2xl font-semibold text-white mb-2">No Blocks Yet</h3>
+              <p className="text-slate-400 mb-6">
+                Start by describing your agent or add blocks manually
+              </p>
+            </div>
+          )}
         </div>
-
-        {/* Execution Indicator */}
-        <ExecutionIndicator
-          isExecuting={isExecuting}
-          isReplaying={isReplaying}
-          currentNodeId={executingNodeId}
-          nodes={nodes}
-        />
       </div>
     </div>
   );
 };
 
-export default VisualAgentBuilder;
+// Block Editor Component
+interface BlockEditorProps {
+  block: Block;
+  crewMode: boolean;
+  isExecuting: boolean;
+  onUpdate: (updates: Partial<Block>) => void;
+  onDelete: () => void;
+}
+
+const BlockEditor: React.FC<BlockEditorProps> = ({ 
+  block, 
+  crewMode, 
+  isExecuting, 
+  onUpdate, 
+  onDelete 
+}) => {
+  const getBlockColor = (type: string) => {
+    switch (type) {
+      case 'state': return 'from-blue-500/20 to-blue-600/20 border-blue-500/30';
+      case 'node': return 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30';
+      case 'router': return 'from-orange-500/20 to-orange-600/20 border-orange-500/30';
+      case 'ruleChecker': return 'from-red-500/20 to-red-600/20 border-red-500/30';
+      case 'output': return 'from-green-500/20 to-green-600/20 border-green-500/30';
+      default: return 'from-gray-500/20 to-gray-600/20 border-gray-500/30';
+    }
+  };
+
+  const executionClass = isExecuting 
+    ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse' 
+    : '';
+
+  return (
+    <Card className={`bg-gradient-to-r ${getBlockColor(block.type)} backdrop-blur-sm border ${executionClass} transition-all duration-300`}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="bg-white/20 text-white">
+            {block.type.toUpperCase()}
+          </Badge>
+          <Input
+            value={block.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            className="bg-transparent border-none text-white font-semibold text-lg p-0 h-auto focus-visible:ring-0"
+          />
+        </div>
+        <Button
+          onClick={onDelete}
+          variant="ghost"
+          size="sm"
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {/* Block-specific content will be rendered here */}
+        <div className="text-white/80">
+          <p>Block configuration for {block.type}</p>
+          {/* Add specific block editors based on type */}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default AgentBuilder;
