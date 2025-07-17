@@ -434,6 +434,23 @@ const BuilderContent: React.FC = () => {
             <LangGraphPropertiesPanel
               selectedNode={selectedNode}
               onUpdateNode={(nodeId, updates) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                ...updates,
+                config: {
+                  ...(n.data?.config || {}),
+                  ...(updates?.config || {})
+                }
+              }
+            }
+          : n
+      )
+    );
                 setNodes((nds) =>
                   nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n))
                 );
