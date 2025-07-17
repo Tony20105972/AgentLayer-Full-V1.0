@@ -22,6 +22,9 @@ import ExecutionIndicator from './builder/ExecutionIndicator';
 import { nodeTypes } from './builder/nodeTypes';
 import { NodeData } from '@/types/flow';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
 
 const VisualAgentBuilder: React.FC = () => {
   return (
@@ -30,6 +33,12 @@ const VisualAgentBuilder: React.FC = () => {
     </ReactFlowProvider>
   );
 };
+
+
+  useEffect(() => {
+    loadFlow();
+  }, []);
+
 
 const BuilderContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -81,12 +90,52 @@ const BuilderContent: React.FC = () => {
     );
   };
 
-  const saveFlow = () => {
+  
+  const saveFlow = async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) {
+      toast({ title: '로그인 필요', description: '저장하려면 로그인해야 합니다.' });
+      return;
+    }
+
+    const flow = { nodes, edges };
+    const { error } = await supabase.from('agent_configs').upsert([
+      {
+        user_id: user.data.user.id,
+        flow,
+        updated_at: new Date().toISOString()
+      }
+    ], { onConflict: ['user_id'] });
+
+    if (error) {
+      toast({ title: '❌ 저장 실패', description: error.message });
+    } else {
+      toast({ title: '✅ 저장 완료', description: 'Agent 구성이 저장되었습니다.' });
+    }
+  };
+
     const flow = { nodes, edges };
     localStorage.setItem('agentFlow', JSON.stringify(flow));
   };
 
-  const loadFlow = () => {
+  
+  const loadFlow = async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) return;
+
+    const { data, error } = await supabase
+      .from('agent_configs')
+      .select('*')
+      .eq('user_id', user.data.user.id)
+      .single();
+
+    if (data?.flow) {
+      setNodes(data.flow.nodes || []);
+      setEdges(data.flow.edges || []);
+      toast({ title: '✅ 불러오기 완료', description: '이전 구성 불러왔습니다.' });
+    }
+  };
+
     const saved = localStorage.getItem('agentFlow');
     if (saved) {
       const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
